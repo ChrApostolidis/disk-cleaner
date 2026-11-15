@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "skip_dirs": [".git", ".hg", ".svn", "node_modules"],
+  "ignore_paths": ["%WINDIR%", "%ProgramFiles%", "%ProgramFiles(x86)%", "%ProgramData%", "%LOCALAPPDATA%\\Programs", "%APPDATA%"],
+  "ecosystems": [
+    {
+      "id": "node",
+      "name": "Node.js",
+      "markers": ["package.json"],
+      "manifest": { "file": "package.json", "format": "npm" },
+      "lockfiles": [
+        { "file": "package-lock.json", "manager": "npm" },
+        { "file": "pnpm-lock.yaml", "manager": "pnpm" },
+        { "file": "yarn.lock", "manager": "yarn" },
+        { "file": "bun.lock", "manager": "bun" },
+        { "file": "bun.lockb", "manager": "bun" }
+      ],
+      "regenerable": ["node_modules", ".next", ".nuxt", ".turbo", ".svelte-kit", ".angular", ".parcel-cache", "dist"],
+      "reinstall": { "npm": "npm ci", "pnpm": "pnpm install --frozen-lockfile", "yarn": "yarn install --frozen-lockfile", "bun": "bun install --frozen-lockfile" }
+    },
+    {
+      "id": "php",
+      "name": "PHP",
+      "markers": ["composer.json"],
+      "manifest": { "file": "composer.json", "format": "composer" },
+      "lockfiles": [{ "file": "composer.lock", "manager": "composer" }],
+      "regenerable": ["vendor"],
+      "reinstall": { "composer": "composer install" }
+    },
+    {
+      "id": "rust",
+      "name": "Rust",
+      "markers": ["Cargo.toml"],
+      "lockfiles": [{ "file": "Cargo.lock", "manager": "cargo" }],
+      "regenerable": ["target"],
+      "reinstall": {}
+    },
+    {
+      "id": "python",
+      "name": "Python",
+      "markers": ["pyproject.toml", "requirements.txt", "setup.py"],
+      "manifest": { "format": "text" },
+      "lockfiles": [
+        { "file": "uv.lock", "manager": "uv" },
+        { "file": "poetry.lock", "manager": "poetry" },
+        { "file": "Pipfile.lock", "manager": "pipenv" }
+      ],
+      "regenerable": [".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox"],
+      "reinstall": { "uv": "uv sync", "poetry": "poetry install", "pipenv": "pipenv sync" }
+    },
+    {
+      "id": "maven",
+      "name": "Maven",
+      "markers": ["pom.xml"],
+      "manifest": { "format": "text" },
+      "lockfiles": [],
+      "regenerable": ["target"],
+      "reinstall": {}
+    },
+    {
+      "id": "gradle",
+      "name": "Gradle",
+      "markers": ["build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"],
+      "manifest": { "format": "text" },
+      "lockfiles": [],
+      "regenerable": ["build", ".gradle"],
+      "reinstall": {}
+    }
+  ],
+  "frameworks": [
+    { "label": "Tauri", "ecosystem": "node", "deps": ["@tauri-apps/cli"] },
+    { "label": "Electron", "ecosystem": "node", "deps": ["electron"] },
+    { "label": "Next.js", "ecosystem": "node", "deps": ["next"] },
+    { "label": "Angular", "ecosystem": "node", "deps": ["@angular/core"] },
+    { "label": "Nuxt", "ecosystem": "node", "deps": ["nuxt"] },
+    { "label": "SvelteKit", "ecosystem": "node", "deps": ["@sveltejs/kit"] },
+    { "label": "Astro", "ecosystem": "node", "deps": ["astro"] },
+    { "label": "Remix", "ecosystem": "node", "deps": ["@remix-run/*"] },
+    { "label": "React Native", "ecosystem": "node", "deps": ["expo"] },
+    { "label": "React Native", "ecosystem": "node", "deps": ["react-native"] },
+    { "label": "NestJS", "ecosystem": "node", "deps": ["@nestjs/core"] },
+    { "label": "Vue", "ecosystem": "node", "deps": ["vue"] },
+    { "label": "React (Vite)", "ecosystem": "node", "deps": ["react", "vite"] },
+    { "label": "React", "ecosystem": "node", "deps": ["react"] },
+    { "label": "Node.js (Express)", "ecosystem": "node", "deps": ["express"] },
+    { "label": "Laravel", "ecosystem": "php", "deps": ["laravel/framework"] },
+    { "label": "Symfony", "ecosystem": "php", "deps": ["symfony/framework-bundle"] },
+    { "label": "Django", "ecosystem": "python", "deps": ["django"] },
+    { "label": "FastAPI", "ecosystem": "python", "deps": ["fastapi"] },
+    { "label": "Flask", "ecosystem": "python", "deps": ["flask"] },
+    { "label": "Spring Boot", "ecosystem": "maven", "deps": ["spring-boot"] },
+    { "label": "Spring Boot", "ecosystem": "gradle", "deps": ["org.springframework.boot"] }
+  ]
+}
