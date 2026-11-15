@@ -3,5 +3,6 @@
 
 pub mod detect;
 pub mod index;
+pub mod projects;
 pub mod rules;
 pub mod scanner;
