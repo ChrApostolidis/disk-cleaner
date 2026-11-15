@@ -8,6 +8,9 @@ use devdisk_core::scanner::{
     Progress, ProgressSink, ScanError, ScanIssue, ScanOptions, Scanner, WalkScanner,
 };
 use devdisk_core::search::{FileSort, Query, filter_projects, find_files};
+use devdisk_core::treemap::{ProjectIndex, TreemapNode, treemap};
+#[cfg(test)]
+use devdisk_core::{treemap::TreemapKind, volume::VolumeInfo};
 use serde::Serialize;
 use std::path::Path;
 use std::sync::Arc;
@@ -16,6 +19,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Upper bound for `list_files`, so a typo cannot ask for millions of rows over IPC.
 pub const MAX_FILE_LIMIT: usize = 5000;
+
+/// Per-folder cut for treemap requests; the rest is folded into one "others" entry.
+pub const TREEMAP_MAX_CHILDREN: usize = 60;
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -90,6 +96,7 @@ pub struct FileEntryDto {
 pub struct ScanData {
     pub tree: Tree,
     pub projects: Vec<Project>,
+    pub project_index: ProjectIndex,
     /// Kept for the upcoming issues view; only the count is surfaced today.
     #[allow(dead_code)]
     pub issues: Vec<ScanIssue>,
@@ -147,9 +154,11 @@ pub fn run_scan(
         projects: projects.len() as u64,
         reclaimable: projects.iter().map(|p| p.reclaimable_allocated).sum(),
     };
+    let project_index = ProjectIndex::new(&tree, &projects);
     Ok(ScanData {
         tree,
         projects,
+        project_index,
         issues: result.issues,
         summary,
     })
@@ -257,6 +266,25 @@ pub fn query_files(
         now,
     );
     Ok(file_dtos(data, &ids))
+}
+
+/// The folder at `path` with children `depth` levels deep (clamped to 1..=3).
+pub fn treemap_at(data: &ScanData, path: &str, depth: u32) -> Result<TreemapNode, String> {
+    let id = data
+        .tree
+        .find(Path::new(path))
+        .ok_or_else(|| format!("not part of the scan: {path}"))?;
+    if data.tree.node(id).kind != NodeKind::Dir {
+        return Err(format!("not a folder: {path}"));
+    }
+    Ok(treemap(
+        &data.tree,
+        &data.projects,
+        &data.project_index,
+        id,
+        depth.clamp(1, 3),
+        TREEMAP_MAX_CHILDREN,
+    ))
 }
 
 #[cfg(test)]
@@ -487,5 +515,130 @@ mod tests {
         // Optionals serialize as null, not as missing keys.
         let v = serde_json::to_value(p).unwrap();
         assert!(v["parentId"].is_null());
+    }
+
+    #[test]
+    fn treemap_of_a_real_scan() {
+        let (dir, data) = fixture();
+        let root = dir.path().to_string_lossy().into_owned();
+        let n = treemap_at(&data, &root, 2).unwrap();
+        assert_eq!(n.kind, TreemapKind::Dir);
+        assert_eq!(n.allocated, data.summary.allocated);
+        let kids = n.children.as_ref().unwrap();
+        // Biggest first: docs (200k) leads.
+        assert_eq!(kids[0].name, "docs");
+        let shop = kids.iter().find(|k| k.name == "shop").unwrap();
+        assert!(shop.project_root);
+        assert_eq!(shop.label.as_deref(), Some("Next.js"));
+        let nm = shop
+            .children
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|k| k.name == "node_modules")
+            .unwrap();
+        assert!(nm.regenerable);
+        assert_eq!(nm.children, None);
+        // Starting below the root still finds the label.
+        let below = dir.path().join("shop").join("src");
+        let m = treemap_at(&data, &below.to_string_lossy(), 1).unwrap();
+        assert_eq!(m.label.as_deref(), Some("Next.js"));
+    }
+
+    #[test]
+    fn treemap_rejects_unknown_paths_and_files() {
+        let (dir, data) = fixture();
+        let e = treemap_at(&data, &dir.path().join("nope").to_string_lossy(), 1).unwrap_err();
+        assert!(e.contains("nope"), "{e}");
+        let file = dir.path().join("docs").join("big.bin");
+        let e = treemap_at(&data, &file.to_string_lossy(), 1).unwrap_err();
+        assert!(e.contains("not a folder"), "{e}");
+    }
+
+    #[test]
+    fn treemap_depth_is_clamped() {
+        let (dir, data) = fixture();
+        let root = dir.path().to_string_lossy().into_owned();
+        // 0 behaves like 1: children loaded, grandchildren not.
+        let n = treemap_at(&data, &root, 0).unwrap();
+        assert!(
+            n.children
+                .as_ref()
+                .unwrap()
+                .iter()
+                .all(|k| k.children.is_none())
+        );
+        // 99 behaves like 3: tool/target/debug is 3 levels down, its files are not loaded.
+        let n = treemap_at(&data, &root, 99).unwrap();
+        let tool = n
+            .children
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|k| k.name == "tool")
+            .unwrap();
+        let target = tool
+            .children
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|k| k.name == "target")
+            .unwrap();
+        let debug = target
+            .children
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|k| k.name == "debug")
+            .unwrap();
+        assert_eq!(debug.children, None);
+    }
+
+    #[test]
+    fn treemap_and_volume_json_match_the_typescript_contract() {
+        let (dir, data) = fixture();
+        let n = treemap_at(&data, &dir.path().to_string_lossy(), 1).unwrap();
+        let node_keys = set(&[
+            "path",
+            "name",
+            "kind",
+            "allocated",
+            "fileCount",
+            "label",
+            "projectRoot",
+            "regenerable",
+            "children",
+        ]);
+        assert_eq!(keys(&n), node_keys);
+        let v = serde_json::to_value(&n).unwrap();
+        assert_eq!(v["kind"], "dir");
+        assert!(v["label"].is_null());
+        let kids = v["children"].as_array().unwrap();
+        assert!(kids.iter().all(|k| k["children"].is_null()));
+        let leaf = treemap_at(&data, &dir.path().join("docs").to_string_lossy(), 1).unwrap();
+        let file = &serde_json::to_value(&leaf).unwrap()["children"][0];
+        assert_eq!(file["kind"], "file");
+
+        // "others" needs more entries than the cut; build one directly.
+        let others = TreemapNode {
+            path: PathBuf::from("x"),
+            name: "1 smaller items".into(),
+            kind: TreemapKind::Others,
+            allocated: 0,
+            file_count: 0,
+            label: None,
+            project_root: false,
+            regenerable: false,
+            children: None,
+        };
+        assert_eq!(serde_json::to_value(&others).unwrap()["kind"], "others");
+        assert_eq!(keys(&others), node_keys);
+
+        let vol = VolumeInfo {
+            mount: PathBuf::from("C:\\"),
+            total: 2,
+            free: 1,
+        };
+        assert_eq!(keys(&vol), set(&["mount", "total", "free"]));
     }
 }

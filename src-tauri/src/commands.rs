@@ -2,9 +2,11 @@
 
 use crate::data::{
     FileEntryDto, ProjectDto, ScanData, ScanErrorDto, ScanSummaryDto, error_dto, progress_dto,
-    query_files, query_projects, run_scan,
+    query_files, query_projects, run_scan, treemap_at,
 };
 use devdisk_core::scanner::{Progress, ProgressSink};
+use devdisk_core::treemap::TreemapNode;
+use devdisk_core::volume::{VolumeInfo, volume_info};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -149,4 +151,25 @@ pub async fn list_files(
         Some(data) => query_files(&data, &query, &sort, descending, limit, SystemTime::now()),
         None => Ok(Vec::new()),
     }
+}
+
+#[tauri::command]
+pub async fn get_volume(state: State<'_, AppState>) -> Result<Option<VolumeInfo>, String> {
+    match state.current() {
+        // Free space changes while the app runs, so this is never cached.
+        Some(data) => volume_info(data.tree.root_path())
+            .map(Some)
+            .map_err(|e| format!("could not read the drive: {e}")),
+        None => Ok(None),
+    }
+}
+
+#[tauri::command]
+pub async fn get_treemap(
+    state: State<'_, AppState>,
+    path: String,
+    depth: u32,
+) -> Result<TreemapNode, String> {
+    let data = state.current().ok_or("no scan yet")?;
+    treemap_at(&data, &path, depth)
 }
