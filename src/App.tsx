@@ -9,9 +9,10 @@ import { SummaryStrip } from "./components/SummaryStrip";
 import { SearchBar } from "./components/SearchBar";
 import { ProjectsTab } from "./components/ProjectsTab";
 import { FilesTab } from "./components/FilesTab";
+import { Treemap } from "./components/Treemap";
 import { useDebounced } from "./useDebounced";
 
-type Tab = "projects" | "files";
+type Tab = "projects" | "files" | "map";
 
 const FILE_LIMIT = 500;
 
@@ -37,6 +38,8 @@ function App() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const requestId = useRef(0);
+  // The map keeps its drill-down while another tab is shown, so it mounts on first visit and then stays.
+  const [mapVisited, setMapVisited] = useState(false);
 
   // Scan lifecycle events. Unsubscribing in cleanup keeps StrictMode's double mount from doubling handlers.
   useEffect(() => {
@@ -80,7 +83,7 @@ function App() {
 
   // Refetch the visible tab whenever the query, sort or scan changes; stale replies are dropped.
   useEffect(() => {
-    if (!summary) return;
+    if (!summary || tab === "map") return;
     const id = ++requestId.current;
     const work =
       tab === "projects"
@@ -115,6 +118,7 @@ function App() {
     setFiles([]);
     setSearchError(null);
     setLoaded(false);
+    setMapVisited(false);
     setProgress(null);
     setScanning(true);
     api.startScan(root.trim()).catch((e: unknown) => {
@@ -131,8 +135,8 @@ function App() {
     }
   };
 
-  const results = tab === "projects" ? projects : files;
-  const showNoResults = summary !== null && loaded && results.length === 0 && searchError === null;
+  const results = tab === "files" ? files : projects;
+  const showNoResults = tab !== "map" && summary !== null && loaded && results.length === 0 && searchError === null;
 
   return (
     <div className="app">
@@ -164,11 +168,27 @@ function App() {
               <button role="tab" aria-selected={tab === "files"} className="tab" onClick={() => setTab("files")}>
                 Biggest files
               </button>
+              <button
+                role="tab"
+                aria-selected={tab === "map"}
+                className="tab"
+                onClick={() => {
+                  setTab("map");
+                  setMapVisited(true);
+                }}
+              >
+                Map
+              </button>
             </div>
           </div>
-          <SearchBar value={query} onChange={setQuery} error={searchError} />
+          {tab !== "map" && <SearchBar value={query} onChange={setQuery} error={searchError} />}
           <main className="content">
-            {showNoResults ? (
+            {mapVisited && (
+              <div className="map-host" hidden={tab !== "map"}>
+                <Treemap key={`${summary.root}|${summary.elapsedMs}|${summary.files}`} root={summary.root} />
+              </div>
+            )}
+            {tab === "map" ? null : showNoResults ? (
               <div className="empty">
                 <h2>No results</h2>
                 <p className="muted">Nothing matches this search. Try fewer words or remove a filter.</p>

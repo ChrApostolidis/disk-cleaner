@@ -83,6 +83,42 @@ export interface FileEntry {
 
 export type FileSort = "allocated" | "size" | "modified" | "name";
 
+/** The volume (drive) holding the scan root. */
+export interface VolumeInfo {
+  /** Volume root, e.g. "C:\\". */
+  mount: string;
+  /** Bytes. */
+  total: number;
+  /** Bytes free on the volume. */
+  free: number;
+}
+
+/** "others" aggregates the children that did not make the per-folder cut. */
+export type TreemapKind = "dir" | "file" | "others";
+
+export interface TreemapNode {
+  /** For "others": the parent folder's path. */
+  path: string;
+  /** For "others": e.g. "1,204 smaller items". */
+  name: string;
+  kind: TreemapKind;
+  /** Size on disk, bytes. Block area is proportional to this. */
+  allocated: number;
+  fileCount: number;
+  /** Label of the nearest enclosing project (this node included), e.g. "Next.js"; null outside projects. */
+  label: string | null;
+  /** True when this folder is itself a project root. */
+  projectRoot: boolean;
+  /** True when this folder is a regenerable folder (node_modules, target, ...) of its enclosing project. */
+  regenerable: boolean;
+  /**
+   * Biggest first, at most 60 real entries plus one "others" entry; zero-size entries go into "others".
+   * null for files, "others", and folders below the requested depth (load them with another get_treemap call).
+   * [] for an empty folder.
+   */
+  children: TreemapNode[] | null;
+}
+
 /**
  * Search bar syntax (parsed in Rust, devdisk-core search module):
  *   words           AND terms, case-insensitive substring of the name
@@ -107,6 +143,13 @@ export interface DevDiskApi {
   listProjects(query: SearchQuery): Promise<Project[]>;
   /** `list_files`: the top `limit` matching files in the given order. Empty before a scan. */
   listFiles(query: SearchQuery, sort: FileSort, descending: boolean, limit: number): Promise<FileEntry[]>;
+  /** `get_volume`: the scanned root's volume, read fresh on each call. null before a scan. */
+  getVolume(): Promise<VolumeInfo | null>;
+  /**
+   * `get_treemap`: the folder at `path` with children loaded `depth` levels deep (clamped to 1..3).
+   * Pass the scan root for the top level. Rejects before a scan or when `path` is not a scanned folder.
+   */
+  getTreemap(path: string, depth: number): Promise<TreemapNode>;
   /** Event listeners. Each returns an unsubscribe function. */
   onProgress(cb: (p: ScanProgress) => void): Promise<() => void>;
   onDone(cb: (s: ScanSummary) => void): Promise<() => void>;
@@ -127,4 +170,6 @@ export const COMMANDS = {
   getSummary: "get_summary",
   listProjects: "list_projects",
   listFiles: "list_files",
+  getVolume: "get_volume",
+  getTreemap: "get_treemap",
 } as const;

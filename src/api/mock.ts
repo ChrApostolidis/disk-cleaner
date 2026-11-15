@@ -7,7 +7,9 @@ import type {
   ScanError,
   ScanProgress,
   ScanSummary,
+  VolumeInfo,
 } from "./types";
+import { buildTree, mockTreemap, mockVolume, type MockTree } from "./mockTree";
 
 const MB = 1024 * 1024;
 const DAY = 86_400_000;
@@ -213,6 +215,8 @@ const errorL: Listeners<ScanError> = new Set();
 let projects: Project[] = [];
 let files: FileEntry[] = [];
 let summary: ScanSummary | null = null;
+let tree: MockTree | null = null;
+let volume: VolumeInfo | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 
 function subscribe<T>(set: Listeners<T>, cb: (v: T) => void): Promise<() => void> {
@@ -239,6 +243,8 @@ export const mockApi: DevDiskApi = {
     projects = [];
     files = [];
     summary = null;
+    tree = null;
+    volume = null;
     timer = setInterval(() => {
       const t = Math.min(1, (Date.now() - start) / duration);
       if (t < 1) {
@@ -255,6 +261,8 @@ export const mockApi: DevDiskApi = {
       timer = null;
       projects = builtProjects;
       files = builtFiles;
+      tree = buildTree(root.trim(), builtProjects, new Map(SEEDS.map((x) => [x.name, x.sourceMb])));
+      volume = mockVolume(root);
       const s: ScanSummary = {
         root,
         files: totalFiles,
@@ -297,6 +305,14 @@ export const mockApi: DevDiskApi = {
       return dir * (a[sort] - b[sort]);
     });
     return list.slice(0, limit);
+  },
+  async getVolume() {
+    await delay(30);
+    return volume;
+  },
+  async getTreemap(path, depth) {
+    await delay(80);
+    return mockTreemap(tree, path, depth);
   },
   onProgress: (cb) => subscribe(progressL, cb),
   onDone: (cb) => subscribe(doneL, cb),
