@@ -7,3 +7,5 @@ pub mod projects;
 pub mod rules;
 pub mod scanner;
 pub mod search;
+pub mod treemap;
+pub mod volume;
