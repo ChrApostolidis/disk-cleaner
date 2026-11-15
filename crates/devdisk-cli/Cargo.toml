@@ -1,0 +1,13 @@
+[package]
+name = "devdisk-cli"
+version = "0.1.0"
+edition = "2024"
+description = "Command-line front end for devdisk-core"
+
+[[bin]]
+name = "devdisk"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+devdisk-core = { path = "../devdisk-core" }
