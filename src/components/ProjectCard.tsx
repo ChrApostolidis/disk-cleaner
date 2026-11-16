@@ -1,5 +1,6 @@
 import type { Project } from "../api/types";
 import { formatAge, formatBytes, relativePath } from "../format";
+import { projectItems, selectionState, type SelectedItem, type Selection } from "../selection";
 import { frameworkColor } from "../ui/frameworkColors";
 import { canReveal, reveal } from "../reveal";
 
@@ -7,20 +8,41 @@ interface Props {
   project: Project;
   parentName: string | null;
   root: string;
-  selection: Map<string, number>;
-  onToggle: (path: string, bytes: number) => void;
+  selection: Selection;
+  onToggle: (item: SelectedItem) => void;
+  onSetMany: (items: SelectedItem[], on: boolean) => void;
   onClean: (p: Project) => void;
 }
 
-export function ProjectCard({ project: p, parentName, root, selection, onToggle, onClean }: Props) {
+export function ProjectCard({ project: p, parentName, root, selection, onToggle, onSetMany, onClean }: Props) {
   const color = frameworkColor(p.label);
+  const items = projectItems(p);
+  const picked = items.filter((it) => selectionState(selection, it.path) !== null).length;
+  const all = items.length > 0 && picked === items.length;
   return (
-    <article className="card" style={{ borderTopColor: color }}>
+    <article className={`card${picked > 0 ? " card-selected" : ""}`} style={{ borderTopColor: color }}>
       <div className="card-head">
         <span className="badge" style={{ color, background: `color-mix(in srgb, ${color} 14%, transparent)` }}>
           {p.label}
         </span>
-        {p.version && <span className="muted num small">v{p.version}</span>}
+        <span className="card-head-end">
+          {p.version && <span className="muted num small">v{p.version}</span>}
+          <label
+            className={`card-select${items.length === 0 ? " card-select-off" : ""}`}
+            title={items.length === 0 ? "Nothing to clean here" : undefined}
+          >
+            <input
+              type="checkbox"
+              checked={all}
+              disabled={items.length === 0}
+              ref={(el) => {
+                if (el) el.indeterminate = picked > 0 && !all;
+              }}
+              onChange={() => onSetMany(items, !all)}
+            />
+            Select
+          </label>
+        </span>
       </div>
       <h3 className="card-title" title={p.displayName}>
         {p.displayName}
@@ -41,17 +63,17 @@ export function ProjectCard({ project: p, parentName, root, selection, onToggle,
         </div>
       </div>
 
-      {p.regenerable.length > 0 && (
+      {items.length > 0 && (
         <div className="folder-chips">
-          {p.regenerable.map((f) => {
-            const on = selection.has(f.path);
+          {p.regenerable.map((f, i) => {
+            const on = selectionState(selection, f.path) !== null;
             return (
               <button
                 className={`folder-chip${on ? " folder-chip-on" : ""}`}
                 key={f.path}
                 title={f.path}
                 aria-pressed={on}
-                onClick={() => onToggle(f.path, f.allocated)}
+                onClick={() => onToggle(items[i])}
               >
                 <span className="chip-box" aria-hidden />
                 {f.name} <span className="num">{formatBytes(f.allocated)}</span>

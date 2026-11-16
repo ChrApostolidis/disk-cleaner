@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import "./App.css";
 import { api, inTauri } from "./api";
@@ -12,6 +12,8 @@ import { FilesTab } from "./components/FilesTab";
 import { Treemap } from "./components/Treemap";
 import { HistoryTab } from "./components/HistoryTab";
 import { SelectionBar } from "./components/SelectionBar";
+import { SelectionDrawer } from "./components/SelectionDrawer";
+import { projectItems, totalBytes, withItems, withoutPaths, selectionState, type SelectedItem, type Selection } from "./selection";
 import { CleanupDialog } from "./components/CleanupDialog";
 import { useReinstalls } from "./useReinstalls";
 import { useDebounced } from "./useDebounced";
@@ -45,46 +47,51 @@ function App() {
   // The map keeps its drill-down while another tab is shown, so it mounts on first visit and then stays.
   const [mapVisited, setMapVisited] = useState(false);
 
-  // Selected paths with their size on disk, kept here so the selection survives tab switches.
-  const [selection, setSelection] = useState<Map<string, number>>(new Map());
+  // Everything picked for cleanup, kept here so the selection survives tab switches.
+  const [selection, setSelection] = useState<Selection>(new Map());
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const viewRef = useRef<HTMLButtonElement>(null);
   // Paths frozen when the review dialog opens, so list refreshes cannot change what is being reviewed.
   const [reviewPaths, setReviewPaths] = useState<string[] | null>(null);
   // Bumped after a cleanup so the map remounts and shows the new tree.
   const [dataVersion, setDataVersion] = useState(0);
   const { reinstalls, startReinstall } = useReinstalls();
 
-  const setMany = useCallback((items: { path: string; bytes: number }[], on: boolean) => {
-    setSelection((prev) => {
-      const next = new Map(prev);
-      for (const it of items) {
-        if (on) next.set(it.path, it.bytes);
-        else next.delete(it.path);
-      }
-      return next;
-    });
+  const setMany = useCallback((items: SelectedItem[], on: boolean) => {
+    setSelection((prev) => (on ? withItems(prev, items) : withoutPaths(prev, items.map((i) => i.path))));
   }, []);
   const toggle = useCallback(
-    (path: string, bytes: number) =>
+    (item: SelectedItem) =>
       setSelection((prev) => {
-        const next = new Map(prev);
-        if (next.has(path)) next.delete(path);
-        else next.set(path, bytes);
-        return next;
+        const state = selectionState(prev, item.path);
+        if (state === "selected") return withoutPaths(prev, [item.path]);
+        // Already inside a selected folder: nothing to add.
+        return state === "covered" ? prev : withItems(prev, [item]);
       }),
     [],
   );
+  const removeOne = useCallback((path: string) => setSelection((prev) => withoutPaths(prev, [path])), []);
+  const clearSelection = useCallback(() => setSelection(new Map()), []);
   const cleanProject = useCallback(
     (p: Project) => {
-      const picked = new Map(selection);
-      p.regenerable.forEach((f) => picked.set(f.path, f.allocated));
+      const picked = withItems(selection, projectItems(p));
       setSelection(picked);
-      setReviewPaths([...picked.keys()]);
+      setReviewPaths([...picked.values()].map((i) => i.path));
     },
     [selection],
   );
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false);
+    requestAnimationFrame(() => viewRef.current?.focus());
+  }, []);
+  const items = useMemo(() => [...selection.values()], [selection]);
+  useEffect(() => {
+    if (selection.size === 0) setDrawerOpen(false);
+  }, [selection.size]);
 
   const afterCleanup = useCallback(() => {
     setSelection(new Map());
+    setDrawerOpen(false);
     setDataVersion((v) => v + 1);
     api
       .getSummary()
@@ -173,6 +180,7 @@ function App() {
     setLoaded(false);
     setMapVisited(false);
     setSelection(new Map());
+    setDrawerOpen(false);
     setProgress(null);
     setScanning(true);
     api.startScan(root.trim()).catch((e: unknown) => {
@@ -242,7 +250,12 @@ function App() {
           <main className="content">
             {mapVisited && (
               <div className="map-host" hidden={tab !== "map"}>
-                <Treemap key={`${summary.root}|${summary.elapsedMs}|${summary.files}|${dataVersion}`} root={summary.root} />
+                <Treemap
+                  key={`${summary.root}|${summary.elapsedMs}|${summary.files}|${dataVersion}`}
+                  root={summary.root}
+                  selection={selection}
+                  onToggle={toggle}
+                />
               </div>
             )}
             {tab === "map" ? null : tab === "history" ? (
@@ -260,6 +273,8 @@ function App() {
                 root={summary.root}
                 selection={selection}
                 onToggle={toggle}
+                onSetMany={setMany}
+                onClear={clearSelection}
                 onClean={cleanProject}
               />
             ) : (
@@ -280,9 +295,26 @@ function App() {
       {selection.size > 0 && summary && (
         <SelectionBar
           count={selection.size}
-          bytes={[...selection.values()].reduce((a, b) => a + b, 0)}
-          onClear={() => setSelection(new Map())}
-          onReview={() => setReviewPaths([...selection.keys()])}
+          bytes={totalBytes(selection)}
+          drawerOpen={drawerOpen}
+          viewRef={viewRef}
+          onClear={clearSelection}
+          onView={() => (drawerOpen ? closeDrawer() : setDrawerOpen(true))}
+          onReview={() => setReviewPaths(items.map((i) => i.path))}
+        />
+      )}
+
+      {drawerOpen && selection.size > 0 && summary && (
+        <SelectionDrawer
+          items={items}
+          root={summary.root}
+          onRemove={removeOne}
+          onClear={clearSelection}
+          onReview={() => {
+            setDrawerOpen(false);
+            setReviewPaths(items.map((i) => i.path));
+          }}
+          onClose={closeDrawer}
         />
       )}
 

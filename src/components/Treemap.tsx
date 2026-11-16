@@ -3,6 +3,7 @@ import { api } from "../api";
 import type { TreemapNode, VolumeInfo } from "../api/types";
 import { formatBytes, formatCount, relativePath, truncateMiddle } from "../format";
 import { canReveal, reveal } from "../reveal";
+import { selectionState, type SelectedItem, type Selection, type SelectionState } from "../selection";
 import { frameworkColor } from "../ui/frameworkColors";
 import { HEADER_H, SWATCH, layoutBlocks, toned, type Block } from "../ui/treemapLayout";
 
@@ -56,7 +57,13 @@ interface Hover {
   y: number;
 }
 
-export function Treemap({ root }: { root: string }) {
+interface TreemapProps {
+  root: string;
+  selection: Selection;
+  onToggle: (item: SelectedItem) => void;
+}
+
+export function Treemap({ root, selection, onToggle }: TreemapProps) {
   const [path, setPath] = useState(root);
   const [node, setNode] = useState<TreemapNode | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +72,7 @@ export function Treemap({ root }: { root: string }) {
   const [showFree, setShowFree] = useState(isDriveRoot(root));
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [hover, setHover] = useState<Hover | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const requestId = useRef(0);
 
@@ -141,6 +149,24 @@ export function Treemap({ root }: { root: string }) {
     setPath(b.node.path);
   }, []);
 
+  // Not selectable: "others" (its path is the parent's), free space, and the folder being viewed.
+  const selectable = (b: Block): boolean =>
+    !b.free && b.node !== null && b.node.kind !== "others" && !samePath(b.node.path, path) && !samePath(b.node.path, root);
+  const stateOf = (b: Block): SelectionState => (b.node && b.node.kind !== "others" ? selectionState(selection, b.node.path) : null);
+  const pick = (b: Block) => {
+    const n = b.node;
+    if (!n || !selectable(b)) return;
+    onToggle({
+      path: n.path,
+      name: n.name,
+      kind: n.kind === "file" ? "file" : "dir",
+      allocated: n.allocated,
+      projectPath: null,
+      projectLabel: n.label,
+      source: "map",
+    });
+  };
+
   const blockAt = (target: EventTarget): Block | null => {
     const el = (target as Element).closest?.("[data-i]");
     const i = el ? Number(el.getAttribute("data-i")) : NaN;
@@ -186,6 +212,14 @@ export function Treemap({ root }: { root: string }) {
             <input type="checkbox" checked={showFree} disabled={!volume} onChange={(e) => setShowFree(e.target.checked)} />
             Show free space
           </label>
+          <button
+            className={`btn btn-small btn-toggle${selectMode ? " btn-pressed" : ""}`}
+            aria-pressed={selectMode}
+            title="Click blocks to select them; double-click a folder to open it"
+            onClick={() => setSelectMode((m) => !m)}
+          >
+            Select
+          </button>
           {canReveal && (
             <button className="btn btn-small" onClick={() => reveal(path)}>
               Show in Explorer
@@ -213,6 +247,13 @@ export function Treemap({ root }: { root: string }) {
               onMouseLeave={() => setHover(null)}
               onClick={(e) => {
                 const b = blockAt(e.target);
+                if (!b) return;
+                if (selectMode) pick(b);
+                else drill(b);
+              }}
+              // The two clicks of a double-click cancel out, so only the drill remains.
+              onDoubleClick={(e) => {
+                const b = selectMode ? blockAt(e.target) : null;
                 if (b) drill(b);
               }}
             >
@@ -226,12 +267,19 @@ export function Treemap({ root }: { root: string }) {
                 </pattern>
               </defs>
               {blocks.map((b) => (
-                <BlockView key={`${b.node?.path ?? "free"}|${b.node?.kind ?? ""}|${b.id}`} b={b} volume={volume} hovered={hover?.block.id === b.id} />
+                <BlockView
+                  key={`${b.node?.path ?? "free"}|${b.node?.kind ?? ""}|${b.id}`}
+                  b={b}
+                  volume={volume}
+                  hovered={hover?.block.id === b.id}
+                  sel={stateOf(b)}
+                  pick={selectMode && selectable(b)}
+                />
               ))}
             </svg>
           )
         )}
-        {hover && !empty && <Tooltip hover={hover} volume={volume} stage={size} />}
+        {hover && !empty && <Tooltip hover={hover} volume={volume} stage={size} sel={stateOf(hover.block)} />}
       </div>
 
       <Legend legend={legend} volume={volume} />
@@ -239,10 +287,22 @@ export function Treemap({ root }: { root: string }) {
   );
 }
 
-function BlockView({ b, volume, hovered }: { b: Block; volume: VolumeInfo | null; hovered: boolean }) {
+function BlockView({
+  b,
+  volume,
+  hovered,
+  sel,
+  pick,
+}: {
+  b: Block;
+  volume: VolumeInfo | null;
+  hovered: boolean;
+  sel: SelectionState;
+  pick: boolean;
+}) {
   const n = b.node;
   const clickable = !b.free && n?.kind === "dir";
-  const cls = clickable ? "tm-block tm-click" : "tm-block";
+  const cls = `tm-block${clickable || pick ? " tm-click" : ""}`;
   const name = blockName(b, volume);
   const sizeText = formatBytes(b.free ? (volume?.free ?? 0) : (n?.allocated ?? 0));
 
@@ -271,6 +331,19 @@ function BlockView({ b, volume, hovered }: { b: Block; volume: VolumeInfo | null
       {b.container && <rect x={b.x} y={b.y} width={b.w} height={headerH} fill={b.headerFill} />}
       {b.regen && <rect x={b.x} y={b.y} width={b.w} height={b.h} fill="url(#tm-stripe)" pointerEvents="none" />}
       {n?.kind === "others" && <rect x={b.x} y={b.y} width={b.w} height={b.h} fill="url(#tm-dots)" pointerEvents="none" />}
+      {sel === "covered" && <rect x={b.x} y={b.y} width={b.w} height={b.h} className="tm-cov" pointerEvents="none" />}
+      {sel === "selected" && (
+        <>
+          <rect x={b.x + 3} y={b.y + 3} width={Math.max(0, b.w - 6)} height={Math.max(0, b.h - 6)} className="tm-sel-halo" pointerEvents="none" />
+          <rect x={b.x + 1} y={b.y + 1} width={Math.max(0, b.w - 2)} height={Math.max(0, b.h - 2)} className="tm-sel" pointerEvents="none" />
+          {b.w >= 30 && b.h >= 30 && (
+            <g pointerEvents="none">
+              <circle cx={b.x + b.w - 14} cy={b.y + 14} r={8} className="tm-badge" />
+              <path d={`M ${b.x + b.w - 18} ${b.y + 14} l 3 3 l 5 -6`} className="tm-badge-check" />
+            </g>
+          )}
+        </>
+      )}
       {hovered && <rect x={b.x + 0.5} y={b.y + 0.5} width={Math.max(0, b.w - 1)} height={Math.max(0, b.h - 1)} className="tm-outline" pointerEvents="none" />}
       {showName && (
         <text x={b.x + PAD} y={b.y + (b.container ? 13 : 15)} fill={b.text} className="tm-text" pointerEvents="none">
@@ -291,7 +364,17 @@ function BlockView({ b, volume, hovered }: { b: Block; volume: VolumeInfo | null
   );
 }
 
-function Tooltip({ hover, volume, stage }: { hover: Hover; volume: VolumeInfo | null; stage: { w: number; h: number } }) {
+function Tooltip({
+  hover,
+  volume,
+  stage,
+  sel,
+}: {
+  hover: Hover;
+  volume: VolumeInfo | null;
+  stage: { w: number; h: number };
+  sel: SelectionState;
+}) {
   const { block: b } = hover;
   const n = b.node;
   const ref = useRef<HTMLDivElement>(null);
@@ -326,6 +409,7 @@ function Tooltip({ hover, volume, stage }: { hover: Hover; volume: VolumeInfo | 
                 {n.label}{n.projectRoot ? " project root" : " project"}
               </div>
             )}
+            {sel && <div className="small tm-selected">{sel === "selected" ? "Selected" : "Included in a selected folder"}</div>}
             {(n.regenerable || b.regen) && <div className="small tm-regen">{n.regenerable ? "Regenerable" : "Inside a regenerable folder"}</div>}
           </>
         )

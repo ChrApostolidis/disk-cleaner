@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { FileEntry, FileSort } from "../api/types";
 import { formatBytes, formatDate, relativeFolder } from "../format";
+import { selectionState, type SelectedItem, type Selection } from "../selection";
 import { canReveal, reveal } from "../reveal";
 
 interface Props {
@@ -10,9 +11,9 @@ interface Props {
   sort: FileSort;
   descending: boolean;
   onSort: (s: FileSort) => void;
-  selection: Map<string, number>;
+  selection: Selection;
   /** Sets every given file to selected or not selected. */
-  onSetMany: (items: { path: string; bytes: number }[], on: boolean) => void;
+  onSetMany: (items: SelectedItem[], on: boolean) => void;
 }
 
 const COLUMNS: { key: FileSort | null; label: string; right?: boolean }[] = [
@@ -32,10 +33,21 @@ export function FilesTab({ files, root, sort, descending, onSort, selection, onS
 
   const click = (index: number, shift: boolean) => {
     const f = files[index];
-    const turnOn = !selection.has(f.path);
+    const turnOn = selectionState(selection, f.path) === null;
     const from = shift && anchor.current !== null ? files.findIndex((x) => x.path === anchor.current) : -1;
     const range = from === -1 ? [f] : files.slice(Math.min(from, index), Math.max(from, index) + 1);
-    onSetMany(range.map((x) => ({ path: x.path, bytes: x.allocated })), turnOn);
+    onSetMany(
+      range.map((x) => ({
+        path: x.path,
+        name: x.name,
+        kind: "file" as const,
+        allocated: x.allocated,
+        projectPath: null,
+        projectLabel: null,
+        source: "files" as const,
+      })),
+      turnOn,
+    );
     anchor.current = f.path;
   };
   const virtualizer = useVirtualizer({
@@ -74,6 +86,7 @@ export function FilesTab({ files, root, sort, descending, onSort, selection, onS
       <div className="tbody" style={{ height: virtualizer.getTotalSize() }}>
         {virtualizer.getVirtualItems().map((v) => {
           const f = files[v.index];
+          const state = selectionState(selection, f.path);
           return (
             <div
               key={f.path}
@@ -84,7 +97,9 @@ export function FilesTab({ files, root, sort, descending, onSort, selection, onS
               <div className="td">
                 <input
                   type="checkbox"
-                  checked={selection.has(f.path)}
+                  checked={state !== null}
+                  disabled={state === "covered"}
+                  title={state === "covered" ? "Included in a selected folder" : undefined}
                   aria-label={`Select ${f.name}`}
                   onChange={() => undefined}
                   onClick={(e) => click(v.index, e.shiftKey)}
