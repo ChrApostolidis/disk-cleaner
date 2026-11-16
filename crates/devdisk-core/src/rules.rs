@@ -48,6 +48,9 @@ pub struct Ecosystem {
     pub lockfiles: Vec<Lockfile>,
     #[serde(default)]
     pub regenerable: Vec<String>,
+    /// Regenerable folders whose reinstall depends on a lockfile (a subset of `regenerable`).
+    #[serde(default)]
+    pub dependencies: Vec<String>,
     #[serde(default)]
     pub reinstall: BTreeMap<String, String>,
 }
@@ -119,6 +122,16 @@ impl Rules {
             if eco.markers.is_empty() {
                 return invalid(format!("ecosystem `{}` has no markers", eco.id));
             }
+            if let Some(bad) = eco
+                .dependencies
+                .iter()
+                .find(|d| !eco.regenerable.iter().any(|r| r.eq_ignore_ascii_case(d)))
+            {
+                return invalid(format!(
+                    "dependency `{bad}` in `{}` is not in its regenerable list",
+                    eco.id
+                ));
+            }
             if let Some(bad) = eco.regenerable.iter().find(|n| has_separator(n)) {
                 return invalid(format!(
                     "regenerable name `{bad}` in `{}` contains a path separator",
@@ -150,6 +163,14 @@ impl Rules {
 
     pub fn ecosystem(&self, id: &str) -> Option<&Ecosystem> {
         self.ecosystems.iter().find(|e| e.id == id)
+    }
+
+    /// True when `name` is a lockfile-dependent dependency folder of any of the ecosystems.
+    pub fn is_dependency_dir(&self, ecosystem_ids: &[String], name: &str) -> bool {
+        ecosystem_ids
+            .iter()
+            .filter_map(|id| self.ecosystem(id))
+            .any(|e| e.dependencies.iter().any(|d| d.eq_ignore_ascii_case(name)))
     }
 
     /// Folder names where project detection never descends, anywhere. Case-insensitive.
@@ -286,5 +307,28 @@ mod tests {
             "ecosystems":[{"id":"a","name":"A","markers":["a"]}]}"#;
         let paths = Rules::from_json(json).unwrap().ignore_paths();
         assert_eq!(paths, [PathBuf::from(std::env::var("PATH").unwrap())]);
+    }
+
+    #[test]
+    fn dependency_dirs_are_regenerable_and_looked_up_case_insensitively() {
+        let r = Rules::builtin();
+        let ids = vec!["node".to_string()];
+        assert!(r.is_dependency_dir(&ids, "Node_Modules"));
+        assert!(!r.is_dependency_dir(&ids, "dist"));
+        assert!(!r.is_dependency_dir(&ids, "vendor"));
+        assert!(r.is_dependency_dir(&["php".to_string()], "vendor"));
+        assert!(r.is_dependency_dir(&["python".to_string()], ".venv"));
+        assert!(!r.is_dependency_dir(&["rust".to_string()], "target"));
+        assert!(!r.is_dependency_dir(&[], "node_modules"));
+    }
+
+    #[test]
+    fn dependency_must_be_listed_as_regenerable() {
+        let json = r#"{"version":1,"ecosystems":[{"id":"x","name":"X","markers":["m"],
+            "regenerable":["a"],"dependencies":["b"]}]}"#;
+        assert!(matches!(
+            Rules::from_json(json),
+            Err(RulesError::Invalid(_))
+        ));
     }
 }

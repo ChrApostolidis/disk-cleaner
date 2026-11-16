@@ -16,6 +16,7 @@
         { "file": "bun.lockb", "manager": "bun" }
       ],
       "regenerable": ["node_modules", ".next", ".nuxt", ".turbo", ".svelte-kit", ".angular", ".parcel-cache", "dist"],
+      "dependencies": ["node_modules"],
       "reinstall": { "npm": "npm ci", "pnpm": "pnpm install --frozen-lockfile", "yarn": "yarn install --frozen-lockfile", "bun": "bun install --frozen-lockfile" }
     },
     {
@@ -25,6 +26,7 @@
       "manifest": { "file": "composer.json", "format": "composer" },
       "lockfiles": [{ "file": "composer.lock", "manager": "composer" }],
       "regenerable": ["vendor"],
+      "dependencies": ["vendor"],
       "reinstall": { "composer": "composer install" }
     },
     {
@@ -46,6 +48,7 @@
         { "file": "Pipfile.lock", "manager": "pipenv" }
       ],
       "regenerable": [".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox"],
+      "dependencies": [".venv", "venv"],
       "reinstall": { "uv": "uv sync", "poetry": "poetry install", "pipenv": "pipenv sync" }
     },
     {

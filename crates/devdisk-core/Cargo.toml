@@ -6,12 +6,14 @@ description = "Scanning, project detection and cleanup logic for DevDisk"
 
 [dependencies]
 jwalk = "0.9.0"
+rusqlite = { version = "0.43.0", features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 thiserror = "2.0.21"
+trash = "5.3.0"
 
 [target."cfg(windows)".dependencies]
-windows-sys = { version = "0.61.2", features = ["Win32_Storage_FileSystem", "Win32_Foundation"] }
+windows-sys = { version = "0.61.2", features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_System_Registry"] }
 
 [target."cfg(windows)".dev-dependencies]
 junction = "2.1.0"
