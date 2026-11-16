@@ -13,6 +13,8 @@
   --danger: #c7283a;
   --danger-bg: #fdebed;
   --shadow: 0 1px 2px rgb(16 24 40 / 6%);
+  --scroll-thumb: #c4c9d3;
+  --scroll-thumb-hover: #9aa2b1;
   font-family: "Segoe UI", system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.45;
@@ -37,6 +39,8 @@
     --danger: #ff7a88;
     --danger-bg: #3a1c21;
     --shadow: none;
+    --scroll-thumb: #3d4350;
+    --scroll-thumb-hover: #5a6272;
   }
 }
 
@@ -354,3 +358,12 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 }
 .hitem:last-child { border-bottom: none; }
 .hitem-status { text-align: right; }
+
+/* Scrollbars: thin, rounded, track-less; the same look for every scroll container. */
+* { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); border: 2px solid transparent; background-clip: padding-box; }
