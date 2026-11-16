@@ -10,9 +10,13 @@ import { SearchBar } from "./components/SearchBar";
 import { ProjectsTab } from "./components/ProjectsTab";
 import { FilesTab } from "./components/FilesTab";
 import { Treemap } from "./components/Treemap";
+import { HistoryTab } from "./components/HistoryTab";
+import { SelectionBar } from "./components/SelectionBar";
+import { CleanupDialog } from "./components/CleanupDialog";
+import { useReinstalls } from "./useReinstalls";
 import { useDebounced } from "./useDebounced";
 
-type Tab = "projects" | "files" | "map";
+type Tab = "projects" | "files" | "map" | "history";
 
 const FILE_LIMIT = 500;
 
@@ -40,6 +44,55 @@ function App() {
   const requestId = useRef(0);
   // The map keeps its drill-down while another tab is shown, so it mounts on first visit and then stays.
   const [mapVisited, setMapVisited] = useState(false);
+
+  // Selected paths with their size on disk, kept here so the selection survives tab switches.
+  const [selection, setSelection] = useState<Map<string, number>>(new Map());
+  // Paths frozen when the review dialog opens, so list refreshes cannot change what is being reviewed.
+  const [reviewPaths, setReviewPaths] = useState<string[] | null>(null);
+  // Bumped after a cleanup so the map remounts and shows the new tree.
+  const [dataVersion, setDataVersion] = useState(0);
+  const { reinstalls, startReinstall } = useReinstalls();
+
+  const setMany = useCallback((items: { path: string; bytes: number }[], on: boolean) => {
+    setSelection((prev) => {
+      const next = new Map(prev);
+      for (const it of items) {
+        if (on) next.set(it.path, it.bytes);
+        else next.delete(it.path);
+      }
+      return next;
+    });
+  }, []);
+  const toggle = useCallback(
+    (path: string, bytes: number) =>
+      setSelection((prev) => {
+        const next = new Map(prev);
+        if (next.has(path)) next.delete(path);
+        else next.set(path, bytes);
+        return next;
+      }),
+    [],
+  );
+  const cleanProject = useCallback(
+    (p: Project) => {
+      const picked = new Map(selection);
+      p.regenerable.forEach((f) => picked.set(f.path, f.allocated));
+      setSelection(picked);
+      setReviewPaths([...picked.keys()]);
+    },
+    [selection],
+  );
+
+  const afterCleanup = useCallback(() => {
+    setSelection(new Map());
+    setDataVersion((v) => v + 1);
+    api
+      .getSummary()
+      .then((s) => {
+        if (s) setSummary(s);
+      })
+      .catch(() => undefined);
+  }, []);
 
   // Scan lifecycle events. Unsubscribing in cleanup keeps StrictMode's double mount from doubling handlers.
   useEffect(() => {
@@ -83,7 +136,7 @@ function App() {
 
   // Refetch the visible tab whenever the query, sort or scan changes; stale replies are dropped.
   useEffect(() => {
-    if (!summary || tab === "map") return;
+    if (!summary || tab === "map" || tab === "history") return;
     const id = ++requestId.current;
     const work =
       tab === "projects"
@@ -119,6 +172,7 @@ function App() {
     setSearchError(null);
     setLoaded(false);
     setMapVisited(false);
+    setSelection(new Map());
     setProgress(null);
     setScanning(true);
     api.startScan(root.trim()).catch((e: unknown) => {
@@ -136,7 +190,7 @@ function App() {
   };
 
   const results = tab === "files" ? files : projects;
-  const showNoResults = tab !== "map" && summary !== null && loaded && results.length === 0 && searchError === null;
+  const showNoResults = (tab === "projects" || tab === "files") && summary !== null && loaded && results.length === 0 && searchError === null;
 
   return (
     <div className="app">
@@ -179,27 +233,68 @@ function App() {
               >
                 Map
               </button>
+              <button role="tab" aria-selected={tab === "history"} className="tab" onClick={() => setTab("history")}>
+                History
+              </button>
             </div>
           </div>
-          {tab !== "map" && <SearchBar value={query} onChange={setQuery} error={searchError} />}
+          {(tab === "projects" || tab === "files") && <SearchBar value={query} onChange={setQuery} error={searchError} />}
           <main className="content">
             {mapVisited && (
               <div className="map-host" hidden={tab !== "map"}>
-                <Treemap key={`${summary.root}|${summary.elapsedMs}|${summary.files}`} root={summary.root} />
+                <Treemap key={`${summary.root}|${summary.elapsedMs}|${summary.files}|${dataVersion}`} root={summary.root} />
               </div>
             )}
-            {tab === "map" ? null : showNoResults ? (
+            {tab === "map" ? null : tab === "history" ? (
+              // Keyed by dataVersion: a cleanup started from the selection bar while this tab is
+              // open must show up here without switching tabs.
+              <HistoryTab key={dataVersion} />
+            ) : showNoResults ? (
               <div className="empty">
                 <h2>No results</h2>
                 <p className="muted">Nothing matches this search. Try fewer words or remove a filter.</p>
               </div>
             ) : tab === "projects" ? (
-              <ProjectsTab projects={projects} root={summary.root} />
+              <ProjectsTab
+                projects={projects}
+                root={summary.root}
+                selection={selection}
+                onToggle={toggle}
+                onClean={cleanProject}
+              />
             ) : (
-              <FilesTab files={files} root={summary.root} sort={sort} descending={descending} onSort={onSort} />
+              <FilesTab
+                files={files}
+                root={summary.root}
+                sort={sort}
+                descending={descending}
+                onSort={onSort}
+                selection={selection}
+                onSetMany={setMany}
+              />
             )}
           </main>
         </>
+      )}
+
+      {selection.size > 0 && summary && (
+        <SelectionBar
+          count={selection.size}
+          bytes={[...selection.values()].reduce((a, b) => a + b, 0)}
+          onClear={() => setSelection(new Map())}
+          onReview={() => setReviewPaths([...selection.keys()])}
+        />
+      )}
+
+      {reviewPaths && summary && (
+        <CleanupDialog
+          paths={reviewPaths}
+          root={summary.root}
+          reinstalls={reinstalls}
+          onReinstall={startReinstall}
+          onCleaned={afterCleanup}
+          onClose={() => setReviewPaths(null)}
+        />
       )}
 
       {!summary && !scanning && !scanError && (

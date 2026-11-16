@@ -7,9 +7,12 @@ interface Props {
   project: Project;
   parentName: string | null;
   root: string;
+  selection: Map<string, number>;
+  onToggle: (path: string, bytes: number) => void;
+  onClean: (p: Project) => void;
 }
 
-export function ProjectCard({ project: p, parentName, root }: Props) {
+export function ProjectCard({ project: p, parentName, root, selection, onToggle, onClean }: Props) {
   const color = frameworkColor(p.label);
   return (
     <article className="card" style={{ borderTopColor: color }}>
@@ -40,11 +43,21 @@ export function ProjectCard({ project: p, parentName, root }: Props) {
 
       {p.regenerable.length > 0 && (
         <div className="folder-chips">
-          {p.regenerable.map((f) => (
-            <span className="folder-chip" key={f.path} title={f.path}>
-              {f.name} <span className="num">{formatBytes(f.allocated)}</span>
-            </span>
-          ))}
+          {p.regenerable.map((f) => {
+            const on = selection.has(f.path);
+            return (
+              <button
+                className={`folder-chip${on ? " folder-chip-on" : ""}`}
+                key={f.path}
+                title={f.path}
+                aria-pressed={on}
+                onClick={() => onToggle(f.path, f.allocated)}
+              >
+                <span className="chip-box" aria-hidden />
+                {f.name} <span className="num">{formatBytes(f.allocated)}</span>
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -56,11 +69,18 @@ export function ProjectCard({ project: p, parentName, root }: Props) {
           <span className="warn">no lockfile</span>
         )}
       </div>
-      {canReveal && (
-        <button className="btn btn-small" onClick={() => reveal(p.path)}>
-          Show in Explorer
-        </button>
-      )}
+      <div className="card-actions">
+        {p.regenerable.length > 0 && (
+          <button className="btn btn-small" onClick={() => onClean(p)}>
+            Clean…
+          </button>
+        )}
+        {canReveal && (
+          <button className="btn btn-small" onClick={() => reveal(p.path)}>
+            Show in Explorer
+          </button>
+        )}
+      </div>
     </article>
   );
 }

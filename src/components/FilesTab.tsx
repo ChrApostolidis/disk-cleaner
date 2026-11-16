@@ -10,6 +10,9 @@ interface Props {
   sort: FileSort;
   descending: boolean;
   onSort: (s: FileSort) => void;
+  selection: Map<string, number>;
+  /** Sets every given file to selected or not selected. */
+  onSetMany: (items: { path: string; bytes: number }[], on: boolean) => void;
 }
 
 const COLUMNS: { key: FileSort | null; label: string; right?: boolean }[] = [
@@ -22,8 +25,19 @@ const COLUMNS: { key: FileSort | null; label: string; right?: boolean }[] = [
 
 const ROW_HEIGHT = 38;
 
-export function FilesTab({ files, root, sort, descending, onSort }: Props) {
+export function FilesTab({ files, root, sort, descending, onSort, selection, onSetMany }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Anchor of a shift-click range, by path so it survives re-sorting and refetching.
+  const anchor = useRef<string | null>(null);
+
+  const click = (index: number, shift: boolean) => {
+    const f = files[index];
+    const turnOn = !selection.has(f.path);
+    const from = shift && anchor.current !== null ? files.findIndex((x) => x.path === anchor.current) : -1;
+    const range = from === -1 ? [f] : files.slice(Math.min(from, index), Math.max(from, index) + 1);
+    onSetMany(range.map((x) => ({ path: x.path, bytes: x.allocated })), turnOn);
+    anchor.current = f.path;
+  };
   const virtualizer = useVirtualizer({
     count: files.length,
     getScrollElement: () => scrollRef.current,
@@ -34,6 +48,7 @@ export function FilesTab({ files, root, sort, descending, onSort }: Props) {
   return (
     <div className="table" ref={scrollRef} role="table" aria-rowcount={files.length}>
       <div className="trow thead" role="row">
+        <div className="th" />
         {COLUMNS.map((c) => {
           const cls = `th${c.right ? " right" : ""}`;
           if (!c.key) return <div key={c.label} className={cls} role="columnheader">{c.label}</div>;
@@ -66,6 +81,15 @@ export function FilesTab({ files, root, sort, descending, onSort }: Props) {
               role="row"
               style={{ height: ROW_HEIGHT, transform: `translateY(${v.start}px)` }}
             >
+              <div className="td">
+                <input
+                  type="checkbox"
+                  checked={selection.has(f.path)}
+                  aria-label={`Select ${f.name}`}
+                  onChange={() => undefined}
+                  onClick={(e) => click(v.index, e.shiftKey)}
+                />
+              </div>
               <div className="td ellipsis" title={f.name}>{f.name}</div>
               <div className="td ellipsis muted" title={f.path}>{relativeFolder(f.path, f.name, root)}</div>
               <div className="td right num">{formatBytes(f.allocated)}</div>

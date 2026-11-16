@@ -1,16 +1,27 @@
 // Browser-only stand-in for the Rust backend so the UI can be developed with `npm run dev`.
 import type {
+  CleanupDone,
+  CleanupPreview,
+  CleanupPreviewItem,
+  CleanupProgress,
+  CleanupResultItem,
   DevDiskApi,
   FileEntry,
   FileSort,
+  HistoryEntry,
   Project,
+  ReinstallDone,
+  ReinstallOffer,
+  ReinstallOutput,
+  RestoreResult,
   ScanError,
   ScanProgress,
   ScanSummary,
   VolumeInfo,
 } from "./types";
-import { buildTree, mockTreemap, mockVolume, type MockTree } from "./mockTree";
+import { buildTree, mockTreemap, mockVolume, normPath, removeFromTree, type MockTree } from "./mockTree";
 
+export const MOCK_DEFAULT_ROOT = "C:\\Users\\you\\Projects";
 const MB = 1024 * 1024;
 const DAY = 86_400_000;
 
@@ -212,6 +223,11 @@ const progressL: Listeners<ScanProgress> = new Set();
 const doneL: Listeners<ScanSummary> = new Set();
 const errorL: Listeners<ScanError> = new Set();
 
+const cleanupProgressL: Listeners<CleanupProgress> = new Set();
+const cleanupDoneL: Listeners<CleanupDone> = new Set();
+const reinstallOutL: Listeners<ReinstallOutput> = new Set();
+const reinstallDoneL: Listeners<ReinstallDone> = new Set();
+
 let projects: Project[] = [];
 let files: FileEntry[] = [];
 let summary: ScanSummary | null = null;
@@ -227,7 +243,211 @@ function subscribe<T>(set: Listeners<T>, cb: (v: T) => void): Promise<() => void
 }
 const delay = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
 
+// ---- cleanup, history, reinstall ----
+
+const BIN_LIMIT = 50 * 1024 ** 3;
+const CLEANUP_MS = 1500;
+let cleaning = false;
+let nextEntryId = 1;
+let nextBatch = 1;
+const reinstalling = new Set<string>();
+
+function seedHistory(): HistoryEntry[] {
+  const now = Date.now();
+  const base = MOCK_DEFAULT_ROOT;
+  const mk = (batchId: string, ago: number, path: string, mb: number, label: string): HistoryEntry => ({
+    id: nextEntryId++,
+    batchId,
+    deletedAt: now - ago,
+    path,
+    allocated: mb * MB,
+    projectPath: path.slice(0, path.lastIndexOf("\\")),
+    projectLabel: label,
+    restoredAt: null,
+  });
+  // Older than a day on purpose: putting these back fails with "no longer in the Recycle Bin".
+  return [
+    mk("seed-a", 3 * DAY, `${base}\\archive\\old-site\\node_modules`, 1130, "Next.js"),
+    mk("seed-a", 3 * DAY, `${base}\\archive\\old-site\\.next`, 210, "Next.js"),
+    mk("seed-b", 9 * DAY, `${base}\\experiments\\prototype\\target`, 3480, "Rust"),
+  ];
+}
+const history: HistoryEntry[] = seedHistory();
+
+// Throws a string for paths outside the scan, like the real command rejects.
+function classify(path: string): CleanupPreviewItem {
+  const key = normPath(path);
+  for (const p of projects) {
+    const f = p.regenerable.find((x) => normPath(x.path) === key);
+    if (!f) continue;
+    const reasons: string[] = [];
+    let verdict: CleanupPreviewItem["verdict"] = "ok";
+    if (f.name === "dist" && p.name === "portfolio-app") {
+      verdict = "refuse";
+      reasons.push("tracked by git: deleting would lose committed files");
+    } else if (f.allocated > BIN_LIMIT) {
+      verdict = "refuse";
+      reasons.push("too big for the Recycle Bin (over 50 GB)");
+    } else if (f.name === "node_modules" && !p.hasLockfile) {
+      verdict = "warn";
+      reasons.push("no lockfile: reinstalling may install different versions");
+    } else if (f.name === ".venv" && !p.hasLockfile) {
+      verdict = "warn";
+      reasons.push("no lockfile: the environment may not be reproducible");
+    }
+    return {
+      path: f.path, name: f.name, kind: "dir", allocated: f.allocated, regenerable: true,
+      projectPath: p.path, projectLabel: p.label, verdict, reasons,
+    };
+  }
+  const file = files.find((x) => normPath(x.path) === key);
+  if (!file) throw `Not part of the scan: ${path}`;
+  const dll = file.name.toLowerCase().endsWith(".dll");
+  return {
+    path: file.path, name: file.name, kind: "file", allocated: file.allocated, regenerable: false,
+    projectPath: null, projectLabel: null,
+    verdict: dll ? "warn" : file.allocated > BIN_LIMIT ? "refuse" : "ok",
+    reasons: dll ? ["a program may still need this library"] : [],
+  };
+}
+
+function offerFor(item: CleanupPreviewItem): ReinstallOffer | null {
+  if (item.name !== "node_modules" || !item.projectPath) return null;
+  const p = projects.find((x) => x.path === item.projectPath);
+  if (!p || !p.hasLockfile || !p.packageManager) return null;
+  return { projectPath: p.path, command: p.packageManager === "npm" ? "npm ci" : `${p.packageManager} install --frozen-lockfile` };
+}
+
+function applyRemoval(removed: CleanupPreviewItem[]): void {
+  const gone = new Set(removed.map((i) => normPath(i.path)));
+  const freed = removed.reduce((a, i) => a + i.allocated, 0);
+  projects = projects.map((p) => {
+    const lost = p.regenerable.filter((f) => gone.has(normPath(f.path)));
+    if (lost.length === 0) return p;
+    const bytes = lost.reduce((a, f) => a + f.allocated, 0);
+    return {
+      ...p,
+      regenerable: p.regenerable.filter((f) => !gone.has(normPath(f.path))),
+      reclaimable: p.reclaimable - bytes,
+      totalAllocated: p.totalAllocated - bytes,
+    };
+  });
+  files = files.filter((f) => !gone.has(normPath(f.path)));
+  removed.forEach((i) => removeFromTree(tree, i.path));
+  if (summary) {
+    summary = {
+      ...summary,
+      allocated: summary.allocated - freed,
+      size: Math.max(0, summary.size - Math.round(freed * 0.97)),
+      reclaimable: projects.reduce((a, p) => a + p.reclaimable, 0),
+    };
+  }
+  if (volume) volume = { ...volume, free: volume.free + freed };
+}
+
+const REINSTALL_LINES: [ReinstallOutput["stream"], string][] = [
+  ["stdout", "> npm ci"],
+  ["stdout", ""],
+  ["stderr", "npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory."],
+  ["stderr", "npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported"],
+  ["stdout", "reify:typescript: http fetch GET 200 https://registry.npmjs.org/typescript 84ms"],
+  ["stdout", "reify:react: http fetch GET 200 https://registry.npmjs.org/react 61ms"],
+  ["stdout", "reify:vite: http fetch GET 200 https://registry.npmjs.org/vite 102ms"],
+  ["stdout", "reify:esbuild: timing reifyNode:node_modules/esbuild Completed in 412ms"],
+  ["stdout", "reify:rollup: timing reifyNode:node_modules/rollup Completed in 530ms"],
+  ["stdout", "reify:@types/node: timing reifyNode:node_modules/@types/node Completed in 98ms"],
+  ["stdout", "run esbuild postinstall: node install.js"],
+  ["stdout", ""],
+  ["stdout", "added 1432 packages, and audited 1433 packages in 2s"],
+  ["stdout", "found 0 vulnerabilities"],
+  ["stdout", "done"],
+];
+
 export const mockApi: DevDiskApi = {
+  async previewCleanup(paths): Promise<CleanupPreview> {
+    await delay(150);
+    if (!summary) throw "No scan has finished yet.";
+    const items = [...new Set(paths)].map(classify);
+    return { items, totalFreed: items.filter((i) => i.verdict !== "refuse").reduce((a, i) => a + i.allocated, 0) };
+  },
+  async startCleanup(paths) {
+    if (timer !== null) throw "A scan is running.";
+    if (cleaning) throw "Another cleanup is already running.";
+    const items = [...new Set(paths)].map(classify);
+    const batchId = `batch-${nextBatch++}`;
+    const todo = items.filter((i) => i.verdict !== "refuse");
+    const start = Date.now();
+    cleaning = true;
+    const tick = setInterval(() => {
+      const t = Math.min(1, (Date.now() - start) / CLEANUP_MS);
+      if (t < 1) {
+        const done = Math.floor(t * todo.length);
+        const p: CleanupProgress = {
+          batchId, done, total: todo.length, currentPath: todo[Math.min(done, todo.length - 1)]?.path ?? "",
+        };
+        cleanupProgressL.forEach((cb) => cb(p));
+        return;
+      }
+      clearInterval(tick);
+      const now = Date.now();
+      const results: CleanupResultItem[] = items.map((i) => {
+        if (i.verdict === "refuse") return { path: i.path, ok: false, error: `Skipped: ${i.reasons.join("; ")}`, entryId: null };
+        const entry: HistoryEntry = {
+          id: nextEntryId++, batchId, deletedAt: now, path: i.path, allocated: i.allocated,
+          projectPath: i.projectPath, projectLabel: i.projectLabel, restoredAt: null,
+        };
+        history.push(entry);
+        return { path: i.path, ok: true, error: null, entryId: entry.id };
+      });
+      // Offers are computed before the removal, while the project data is still there.
+      const offers = new Map<string, ReinstallOffer>();
+      todo.forEach((i) => {
+        const o = offerFor(i);
+        if (o) offers.set(o.projectPath, o);
+      });
+      applyRemoval(todo);
+      cleaning = false;
+      const d: CleanupDone = {
+        batchId,
+        freed: todo.reduce((a, i) => a + i.allocated, 0),
+        items: results,
+        reinstall: [...offers.values()],
+      };
+      cleanupDoneL.forEach((cb) => cb(d));
+    }, 100);
+    return batchId;
+  },
+  async listHistory() {
+    await delay(60);
+    return [...history].sort((a, b) => b.deletedAt - a.deletedAt || b.id - a.id).map((e) => ({ ...e }));
+  },
+  async restoreEntries(ids) {
+    await delay(300);
+    const now = Date.now();
+    return ids.map((id): RestoreResult => {
+      const e = history.find((x) => x.id === id);
+      if (!e) return { id, ok: false, error: "unknown history entry" };
+      if (e.restoredAt !== null) return { id, ok: false, error: "already put back" };
+      if (now - e.deletedAt > DAY) return { id, ok: false, error: "no longer in the Recycle Bin" };
+      e.restoredAt = now;
+      return { id, ok: true, error: null };
+    });
+  },
+  async startReinstall(projectPath) {
+    if (reinstalling.has(projectPath)) throw "A reinstall is already running for this project.";
+    reinstalling.add(projectPath);
+    REINSTALL_LINES.forEach(([stream, line], i) => {
+      setTimeout(() => reinstallOutL.forEach((cb) => cb({ projectPath, stream, line })), 150 + (i * 1800) / REINSTALL_LINES.length);
+    });
+    setTimeout(() => {
+      reinstalling.delete(projectPath);
+      reinstallDoneL.forEach((cb) => cb({ projectPath, success: true, exitCode: 0 }));
+    }, 2100);
+  },
+  onCleanupProgress: (cb) => subscribe(cleanupProgressL, cb),
+  onCleanupDone: (cb) => subscribe(cleanupDoneL, cb),
+  onReinstallOutput: (cb) => subscribe(reinstallOutL, cb),
+  onReinstallDone: (cb) => subscribe(reinstallDoneL, cb),
   async startScan(root) {
     if (timer !== null) throw "A scan is already running.";
     if (!root.trim()) throw "The path is not a folder.";
@@ -319,4 +539,3 @@ export const mockApi: DevDiskApi = {
   onError: (cb) => subscribe(errorL, cb),
 };
 
-export const MOCK_DEFAULT_ROOT = "C:\\Users\\you\\Projects";

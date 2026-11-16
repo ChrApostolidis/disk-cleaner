@@ -62,3 +62,11 @@ export function relativeFolder(path: string, name: string, root: string): string
   const rel = relativePath(full.replace(/[\\/]+$/, ""), root);
   return rel === "." ? "" : rel;
 }
+
+export function formatDateTime(ms: number): string {
+  return new Date(ms).toLocaleString("en-GB", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+export function baseName(path: string): string {
+  return path.replace(/[\\/]+$/, "").split(/[\\/]/).pop() ?? path;
+}

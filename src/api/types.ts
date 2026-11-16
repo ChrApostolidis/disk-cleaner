@@ -131,6 +131,104 @@ export interface TreemapNode {
  */
 export type SearchQuery = string;
 
+/**
+ * Cleanup checks, per item:
+ *   "ok"     can go to the Recycle Bin
+ *   "warn"   can go, but the preview must show the reasons (e.g. dependency folder without a lockfile)
+ *   "refuse" will be skipped (protected path, git-tracked, too big for the Recycle Bin, Recycle Bin off, ...)
+ */
+export type CleanupVerdict = "ok" | "warn" | "refuse";
+
+export interface CleanupPreviewItem {
+  path: string;
+  name: string;
+  kind: "file" | "dir";
+  /** Size on disk, bytes. */
+  allocated: number;
+  /** A regenerable folder (node_modules, target, ...) of its project. */
+  regenerable: boolean;
+  /** Enclosing project, if any. */
+  projectPath: string | null;
+  projectLabel: string | null;
+  verdict: CleanupVerdict;
+  /** Human-readable reasons for "warn"/"refuse"; empty for "ok". */
+  reasons: string[];
+}
+
+export interface CleanupPreview {
+  items: CleanupPreviewItem[];
+  /** Sum of `allocated` over items that are not refused. */
+  totalFreed: number;
+}
+
+/** Payload of `cleanup-progress`. */
+export interface CleanupProgress {
+  batchId: string;
+  done: number;
+  total: number;
+  currentPath: string;
+}
+
+export interface CleanupResultItem {
+  path: string;
+  ok: boolean;
+  /** Why it failed or was skipped; null when ok. */
+  error: string | null;
+  /** History entry id when ok. */
+  entryId: number | null;
+}
+
+/** A project whose dependency folder was just removed and that has a known reinstall command. */
+export interface ReinstallOffer {
+  projectPath: string;
+  /** e.g. "npm ci". */
+  command: string;
+}
+
+/** Payload of `cleanup-done`. */
+export interface CleanupDone {
+  batchId: string;
+  /** Bytes actually moved to the Recycle Bin. */
+  freed: number;
+  items: CleanupResultItem[];
+  reinstall: ReinstallOffer[];
+}
+
+/** One item moved to the Recycle Bin by DevDisk. */
+export interface HistoryEntry {
+  id: number;
+  /** All items of one cleanup share a batchId. */
+  batchId: string;
+  deletedAt: UnixMs;
+  path: string;
+  allocated: number;
+  projectPath: string | null;
+  projectLabel: string | null;
+  /** Set once put back. */
+  restoredAt: UnixMs | null;
+}
+
+export interface RestoreResult {
+  id: number;
+  ok: boolean;
+  /** e.g. "no longer in the Recycle Bin", "a folder already exists at that path". */
+  error: string | null;
+}
+
+/** Payload of `reinstall-output`: one line of the reinstall command's output. */
+export interface ReinstallOutput {
+  projectPath: string;
+  stream: "stdout" | "stderr";
+  line: string;
+}
+
+/** Payload of `reinstall-done`. */
+export interface ReinstallDone {
+  projectPath: string;
+  success: boolean;
+  exitCode: number | null;
+}
+
 /** Tauri command names and their arguments/results. All commands reject with a string message. */
 export interface DevDiskApi {
   /** `start_scan`: starts a background scan; rejects if one is running or the path is not a folder. */
@@ -150,6 +248,25 @@ export interface DevDiskApi {
    * Pass the scan root for the top level. Rejects before a scan or when `path` is not a scanned folder.
    */
   getTreemap(path: string, depth: number): Promise<TreemapNode>;
+  /** `preview_cleanup`: checks for the given scanned paths. Rejects before a scan or for a path not in the scan. */
+  previewCleanup(paths: string[]): Promise<CleanupPreview>;
+  /**
+   * `start_cleanup`: re-runs the checks, then moves every non-refused item to the Recycle Bin in the background.
+   * Resolves with the batchId at once; progress/result come as `cleanup-progress` / `cleanup-done`.
+   * Afterwards the scan data no longer contains the moved items (summary, projects, files and treemap update).
+   * Rejects while a scan or another cleanup is running.
+   */
+  startCleanup(paths: string[]): Promise<string>;
+  /** `list_history`: every cleanup entry, newest first. */
+  listHistory(): Promise<HistoryEntry[]>;
+  /** `restore_entries`: puts items back from the Recycle Bin to their original paths. Not reflected in the scan until a rescan. */
+  restoreEntries(ids: number[]): Promise<RestoreResult[]>;
+  /** `start_reinstall`: runs the project's reinstall command in its folder; output comes as `reinstall-output` / `reinstall-done`. */
+  startReinstall(projectPath: string): Promise<void>;
+  onCleanupProgress(cb: (p: CleanupProgress) => void): Promise<() => void>;
+  onCleanupDone(cb: (d: CleanupDone) => void): Promise<() => void>;
+  onReinstallOutput(cb: (o: ReinstallOutput) => void): Promise<() => void>;
+  onReinstallDone(cb: (d: ReinstallDone) => void): Promise<() => void>;
   /** Event listeners. Each returns an unsubscribe function. */
   onProgress(cb: (p: ScanProgress) => void): Promise<() => void>;
   onDone(cb: (s: ScanSummary) => void): Promise<() => void>;
@@ -161,6 +278,10 @@ export const EVENTS = {
   progress: "scan-progress",
   done: "scan-done",
   error: "scan-error",
+  cleanupProgress: "cleanup-progress",
+  cleanupDone: "cleanup-done",
+  reinstallOutput: "reinstall-output",
+  reinstallDone: "reinstall-done",
 } as const;
 
 /** Tauri command names. Arguments are passed as camelCase objects, e.g. invoke("list_files", { query, sort, descending, limit }). */
@@ -172,4 +293,9 @@ export const COMMANDS = {
   listFiles: "list_files",
   getVolume: "get_volume",
   getTreemap: "get_treemap",
+  previewCleanup: "preview_cleanup",
+  startCleanup: "start_cleanup",
+  listHistory: "list_history",
+  restoreEntries: "restore_entries",
+  startReinstall: "start_reinstall",
 } as const;

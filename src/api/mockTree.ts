@@ -204,3 +204,23 @@ export function mockVolume(root: string): VolumeInfo {
   const m = /^([A-Za-z]):/.exec(root.trim());
   return { mount: `${m ? m[1].toUpperCase() : "C"}:\\`, total: 1024 * GB, free: 180 * GB };
 }
+
+/** Removes a file or folder from the fake tree and shrinks every ancestor, like a rescan after a cleanup. No-op for unknown paths. */
+export function removeFromTree(tree: MockTree | null, path: string): void {
+  if (!tree) return;
+  const parentOf = (p: string) => p.replace(/[\\/]+$/, "").replace(/[\\/][^\\/]*$/, "");
+  const key = normPath(path);
+  const parent = tree.index.get(normPath(parentOf(path)));
+  const node = parent?.kids.find((k) => normPath(k.path) === key);
+  if (!parent || !node) return;
+  parent.kids = parent.kids.filter((k) => k !== node);
+  const forget = (n: MNode) => {
+    tree.index.delete(normPath(n.path));
+    n.kids.forEach(forget);
+  };
+  forget(node);
+  for (let cur: MNode | undefined = parent; cur; cur = tree.index.get(normPath(parentOf(cur.path)))) {
+    cur.bytes -= node.bytes;
+    cur.files -= node.files;
+  }
+}
