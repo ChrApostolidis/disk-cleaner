@@ -309,7 +309,8 @@ pub fn find_files(
     let mut hits: Vec<NodeId> = (0..tree.len())
         .filter(|&id| {
             let n = tree.node(id);
-            n.kind == NodeKind::File
+            tree.is_live(id)
+                && n.kind == NodeKind::File
                 && query.matches(&[n.name.as_str()], n.allocated, n.modified, now)
         })
         .collect();
@@ -354,6 +355,9 @@ pub fn filter_projects(
         .iter()
         .enumerate()
         .filter(|(_, p)| {
+            if !tree.is_live(p.node) {
+                return false;
+            }
             let path = tree.path(p.node);
             let folder = path
                 .file_name()
@@ -734,5 +738,28 @@ mod tests {
         eprintln!("find_files over 1M files: {elapsed:?}");
         assert_eq!(hits.len(), 200);
         assert!(elapsed < Duration::from_millis(500), "{elapsed:?}");
+    }
+
+    #[test]
+    fn dead_nodes_are_skipped() {
+        use crate::index::TreeBuilder;
+        use std::path::Path;
+        let mut b = TreeBuilder::new(Path::new("C:\r"), None);
+        let root = b.root();
+        let d = b.add_dir(root, "d", None);
+        b.add_file(d, "gone.txt", 1, 4096, None);
+        b.add_file(root, "kept.txt", 1, 4096, None);
+        let mut tree = b.finish();
+        tree.detach(d);
+        let hits = find_files(
+            &tree,
+            &Query::parse("").unwrap(),
+            FileSort::Name,
+            false,
+            10,
+            SystemTime::now(),
+        );
+        let names: Vec<&str> = hits.iter().map(|&i| tree.node(i).name.as_str()).collect();
+        assert_eq!(names, ["kept.txt"]);
     }
 }

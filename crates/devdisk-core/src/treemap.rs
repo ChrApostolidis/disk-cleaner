@@ -28,6 +28,7 @@ pub struct TreemapNode {
 }
 
 /// Precomputed once per scan so a treemap request never searches the project list.
+#[derive(Clone)]
 pub struct ProjectIndex {
     /// Project root node -> index into the projects slice.
     roots: HashMap<NodeId, usize>,

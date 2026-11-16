@@ -141,19 +141,30 @@ impl TreeBuilder {
             });
         }
 
+        let ends = offsets[1..].to_vec();
+        let dead = vec![false; n];
         Tree {
             root_path: self.root_path,
             nodes: self.nodes,
             offsets,
+            ends,
+            dead,
             children: flat,
         }
     }
 }
 
+#[derive(Clone)]
 pub struct Tree {
     root_path: PathBuf,
     nodes: Vec<Node>,
+    /// Start of each node's child slice in `children`.
     offsets: Vec<usize>,
+    /// End of each node's child slice. Separate from `offsets` so `detach` can shrink a
+    /// slice without renumbering every later node.
+    ends: Vec<usize>,
+    /// Detached nodes stay in `nodes` (ids must stay stable) but are invisible.
+    dead: Vec<bool>,
     children: Vec<NodeId>,
 }
 
@@ -172,7 +183,7 @@ impl Tree {
 
     /// Sorted by `allocated` descending.
     pub fn children(&self, id: NodeId) -> &[NodeId] {
-        &self.children[self.offsets[id]..self.offsets[id + 1]]
+        &self.children[self.offsets[id]..self.ends[id]]
     }
 
     /// ASCII case-insensitive, because Windows paths are.
@@ -225,6 +236,48 @@ impl Tree {
         Some(cur)
     }
 
+    /// False once the node (or an ancestor) was detached.
+    pub fn is_live(&self, id: NodeId) -> bool {
+        !self.dead[id]
+    }
+
+    /// Removes `id` and its whole subtree from the live tree, e.g. after it was moved to the
+    /// Recycle Bin. Ancestors lose its `size`, `allocated` and `file_count`; the node leaves
+    /// its parent's `children()` (order of the others is kept) and it and all its descendants
+    /// are skipped by `find`, `child_by_name`, `biggest_files` and `biggest_dirs`.
+    /// Ancestors' `newest_modified` is NOT recomputed (that would need a rescan), so it may
+    /// still show a time from the removed files. No-op for the root or an already dead node.
+    pub fn detach(&mut self, id: NodeId) {
+        let Some(parent) = self.nodes[id].parent else {
+            return;
+        };
+        if self.dead[id] {
+            return;
+        }
+        let (size, allocated, files) = {
+            let n = &self.nodes[id];
+            (n.size, n.allocated, n.file_count)
+        };
+        let mut cur = Some(parent);
+        while let Some(a) = cur {
+            let n = &mut self.nodes[a];
+            n.size = n.size.saturating_sub(size);
+            n.allocated = n.allocated.saturating_sub(allocated);
+            n.file_count = n.file_count.saturating_sub(files);
+            cur = n.parent;
+        }
+        let (start, end) = (self.offsets[parent], self.ends[parent]);
+        if let Some(pos) = self.children[start..end].iter().position(|&c| c == id) {
+            self.children.copy_within(start + pos + 1..end, start + pos);
+            self.ends[parent] -= 1;
+        }
+        let mut stack = vec![id];
+        while let Some(n) = stack.pop() {
+            self.dead[n] = true;
+            stack.extend_from_slice(&self.children[self.offsets[n]..self.ends[n]]);
+        }
+    }
+
     pub fn len(&self) -> usize {
         self.nodes.len()
     }
@@ -245,7 +298,7 @@ impl Tree {
 
     fn top(&self, limit: usize, keep: impl Fn(&Node) -> bool) -> Vec<NodeId> {
         let mut ids: Vec<NodeId> = (0..self.nodes.len())
-            .filter(|&i| keep(&self.nodes[i]))
+            .filter(|&i| !self.dead[i] && keep(&self.nodes[i]))
             .collect();
         let key = |&i: &NodeId| (Reverse(self.nodes[i].allocated), i);
         if limit < ids.len() {
@@ -357,5 +410,53 @@ mod tests {
         assert_eq!(dirs, ["a", "B", "empty"]);
         assert_eq!(tree.len(), 8);
         assert!(!tree.is_empty());
+    }
+
+    #[test]
+    fn detach_updates_ancestors_and_hides_subtree() {
+        let mut tree = sample();
+        let a = tree.child_by_name(tree.root(), "a").unwrap();
+        let x = tree.child_by_name(a, "x").unwrap();
+        let before: Vec<NodeId> = tree.children(tree.root()).to_vec();
+        tree.detach(a);
+        let root = tree.node(tree.root());
+        assert_eq!((root.size, root.allocated, root.file_count), (105, 136, 2));
+        // Newest times of ancestors are deliberately not recomputed.
+        assert_eq!(root.newest_modified, t(9));
+        assert!(!tree.is_live(a) && !tree.is_live(x));
+        assert!(tree.is_live(tree.root()));
+        let expect: Vec<NodeId> = before.into_iter().filter(|&c| c != a).collect();
+        assert_eq!(tree.children(tree.root()), expect.as_slice());
+        assert_eq!(tree.find(Path::new("C:\\data\\a")), None);
+        assert_eq!(tree.find(Path::new("C:\\data\\a\\x")), None);
+        assert!(!tree.biggest_files(10).contains(&x));
+        assert!(!tree.biggest_dirs(10).contains(&a));
+    }
+
+    #[test]
+    fn detach_twice_or_root_is_noop() {
+        let mut tree = sample();
+        let b = tree.child_by_name(tree.root(), "B").unwrap();
+        tree.detach(b);
+        let snapshot = tree.node(tree.root()).allocated;
+        tree.detach(b);
+        tree.detach(tree.root());
+        assert_eq!(tree.node(tree.root()).allocated, snapshot);
+        assert!(tree.is_live(tree.root()));
+    }
+
+    #[test]
+    fn detach_nested_subtracts_from_every_ancestor() {
+        let mut b = TreeBuilder::new(Path::new("C:\\r"), None);
+        let root = b.root();
+        let d1 = b.add_dir(root, "d1", None);
+        let d2 = b.add_dir(d1, "d2", None);
+        b.add_file(d2, "f", 10, 16, None);
+        b.add_file(d1, "g", 1, 4, None);
+        let mut tree = b.finish();
+        tree.detach(d2);
+        assert_eq!(tree.node(d1).allocated, 4);
+        assert_eq!(tree.node(d1).file_count, 1);
+        assert_eq!(tree.node(root).size, 1);
     }
 }
