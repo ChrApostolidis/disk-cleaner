@@ -15,6 +15,11 @@ pub fn run() {
             commands::list_files,
             commands::get_volume,
             commands::get_treemap,
+            commands::preview_cleanup,
+            commands::start_cleanup,
+            commands::list_history,
+            commands::restore_entries,
+            commands::start_reinstall,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

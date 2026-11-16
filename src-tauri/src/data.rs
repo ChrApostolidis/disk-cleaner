@@ -1,6 +1,10 @@
 //! Tauri-free logic: scanning, the stored scan data, and the DTOs the UI receives.
 //! Everything here is unit-testable without a Tauri runtime.
 
+use devdisk_core::cleanup::{
+    CleanupContext, CleanupError, CleanupLog, Environment, Mover, RecycleOutcome, RestoreOutcome,
+    recycle,
+};
 use devdisk_core::index::{NodeId, NodeKind, Tree};
 use devdisk_core::projects::{Project, find_projects};
 use devdisk_core::rules::Rules;
@@ -12,9 +16,10 @@ use devdisk_core::treemap::{ProjectIndex, TreemapNode, treemap};
 #[cfg(test)]
 use devdisk_core::{treemap::TreemapKind, volume::VolumeInfo};
 use serde::Serialize;
-use std::path::Path;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Upper bound for `list_files`, so a typo cannot ask for millions of rows over IPC.
@@ -93,6 +98,7 @@ pub struct FileEntryDto {
 }
 
 /// One finished scan, shared read-only between commands.
+#[derive(Clone)]
 pub struct ScanData {
     pub tree: Tree,
     pub projects: Vec<Project>,
@@ -135,33 +141,41 @@ pub fn run_scan(
         ..ScanOptions::default()
     };
     let result = WalkScanner.scan(root, &options, sink)?;
-    let tree = result.tree;
-    let projects = find_projects(&tree, &Rules::builtin());
+    let elapsed_ms = result.elapsed.as_millis() as u64;
+    Ok(build_data(result.tree, result.issues, elapsed_ms))
+}
 
-    let root_node = tree.node(tree.root());
-    let dirs = (0..tree.len())
-        .filter(|&id| tree.node(id).kind == NodeKind::Dir)
+fn live_dirs(tree: &Tree) -> u64 {
+    (0..tree.len())
+        .filter(|&id| tree.is_live(id) && tree.node(id).kind == NodeKind::Dir)
         .count()
-        .saturating_sub(1) as u64;
+        .saturating_sub(1) as u64
+}
+
+/// Derives projects, the treemap index and the summary from a tree, so a fresh scan and a
+/// tree that had items detached after a cleanup end up with the same kind of data.
+fn build_data(tree: Tree, issues: Vec<ScanIssue>, elapsed_ms: u64) -> ScanData {
+    let projects = find_projects(&tree, &Rules::builtin());
+    let root_node = tree.node(tree.root());
     let summary = ScanSummaryDto {
         root: tree.root_path().to_string_lossy().into_owned(),
         files: root_node.file_count,
-        dirs,
+        dirs: live_dirs(&tree),
         allocated: root_node.allocated,
         size: root_node.size,
-        elapsed_ms: result.elapsed.as_millis() as u64,
-        issues: result.issues.len() as u64,
+        elapsed_ms,
+        issues: issues.len() as u64,
         projects: projects.len() as u64,
         reclaimable: projects.iter().map(|p| p.reclaimable_allocated).sum(),
     };
     let project_index = ProjectIndex::new(&tree, &projects);
-    Ok(ScanData {
+    ScanData {
         tree,
         projects,
         project_index,
-        issues: result.issues,
+        issues,
         summary,
-    })
+    }
 }
 
 fn folder_name(tree: &Tree, node: NodeId) -> String {
@@ -285,6 +299,200 @@ pub fn treemap_at(data: &ScanData, path: &str, depth: u32) -> Result<TreemapNode
         depth.clamp(1, 3),
         TREEMAP_MAX_CHILDREN,
     ))
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanupProgressDto {
+    pub batch_id: String,
+    pub done: u64,
+    pub total: u64,
+    pub current_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanupResultItemDto {
+    pub path: String,
+    pub ok: bool,
+    pub error: Option<String>,
+    pub entry_id: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReinstallOffer {
+    pub project_path: String,
+    pub command: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanupDoneDto {
+    pub batch_id: String,
+    pub freed: u64,
+    pub items: Vec<CleanupResultItemDto>,
+    pub reinstall: Vec<ReinstallOffer>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreResultDto {
+    pub id: i64,
+    pub ok: bool,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReinstallOutputDto {
+    pub project_path: String,
+    pub stream: &'static str,
+    pub line: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReinstallDoneDto {
+    pub project_path: String,
+    pub success: bool,
+    pub exit_code: Option<i32>,
+}
+
+pub fn restore_dtos(outcomes: Vec<RestoreOutcome>) -> Vec<RestoreResultDto> {
+    outcomes
+        .into_iter()
+        .map(|o| RestoreResultDto {
+            id: o.id,
+            ok: o.ok,
+            error: o.error,
+        })
+        .collect()
+}
+
+pub fn result_items(outcomes: &[RecycleOutcome]) -> Vec<CleanupResultItemDto> {
+    outcomes
+        .iter()
+        .map(|o| CleanupResultItemDto {
+            path: o.path.to_string_lossy().into_owned(),
+            ok: o.ok,
+            error: o.error.clone(),
+            entry_id: o.entry_id,
+        })
+        .collect()
+}
+
+/// Bytes that really went to the Recycle Bin.
+pub fn freed_bytes(outcomes: &[RecycleOutcome]) -> u64 {
+    outcomes.iter().filter(|o| o.ok).map(|o| o.allocated).sum()
+}
+
+/// Ids are only compared for equality, so time plus a process-wide counter is unique enough
+/// (the counter covers two cleanups starting in the same millisecond).
+pub fn batch_id() -> String {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let ms = unix_ms(SystemTime::now()).unwrap_or(0);
+    format!("{ms:x}-{}", COUNTER.fetch_add(1, Ordering::Relaxed))
+}
+
+/// Case-insensitive like Windows paths, so the UI's spelling of a path always finds the project.
+pub fn find_project_by_path<'a>(data: &'a ScanData, path: &str) -> Option<&'a Project> {
+    data.projects.iter().find(|p| {
+        data.tree
+            .path(p.node)
+            .to_string_lossy()
+            .eq_ignore_ascii_case(path)
+    })
+}
+
+/// Reinstall suggestions for the successful items. Must be given the data from *before*
+/// `apply_cleanup`, because detached nodes can no longer be looked up.
+pub fn reinstall_offers(
+    data: &ScanData,
+    rules: &Rules,
+    outcomes: &[RecycleOutcome],
+) -> Vec<ReinstallOffer> {
+    let mut seen = HashSet::new();
+    let mut offers = Vec::new();
+    for o in outcomes.iter().filter(|o| o.ok) {
+        let Some(node) = data.tree.find(&o.path) else {
+            continue;
+        };
+        let n = data.tree.node(node);
+        let Some(project) = n
+            .parent
+            .and_then(|parent| data.projects.iter().find(|p| p.node == parent))
+        else {
+            continue;
+        };
+        let Some(command) = &project.info.reinstall_command else {
+            continue;
+        };
+        if !rules.is_dependency_dir(&project.info.ecosystems, &n.name) {
+            continue;
+        }
+        let project_path = data.tree.path(project.node).to_string_lossy().into_owned();
+        if seen.insert(project_path.to_ascii_lowercase()) {
+            offers.push(ReinstallOffer {
+                project_path,
+                command: command.clone(),
+            });
+        }
+    }
+    offers
+}
+
+/// A copy of `data` without the items that were moved to the Recycle Bin.
+pub fn apply_cleanup(data: &ScanData, outcomes: &[RecycleOutcome]) -> ScanData {
+    let mut tree = data.tree.clone();
+    for o in outcomes.iter().filter(|o| o.ok) {
+        if let Some(id) = tree.find(&o.path) {
+            tree.detach(id);
+        }
+    }
+    build_data(tree, data.issues.clone(), data.summary.elapsed_ms)
+}
+
+/// Runs the checked recycle and returns the outcomes together with the updated scan data.
+#[allow(clippy::too_many_arguments)]
+pub fn run_cleanup(
+    data: &ScanData,
+    paths: &[PathBuf],
+    protected: &[PathBuf],
+    env: &dyn Environment,
+    mover: &dyn Mover,
+    log: &CleanupLog,
+    batch: &str,
+    progress: &mut dyn FnMut(usize, usize, &Path),
+) -> Result<(Vec<RecycleOutcome>, ScanData), CleanupError> {
+    let rules = Rules::builtin();
+    let ctx = CleanupContext {
+        tree: &data.tree,
+        projects: &data.projects,
+        rules: &rules,
+        protected,
+    };
+    let outcomes = recycle(&ctx, paths, env, mover, log, batch, progress)?;
+    let updated = apply_cleanup(data, &outcomes);
+    Ok((outcomes, updated))
+}
+
+/// Scan and cleanup both depend on the stored scan, so they never overlap.
+pub fn check_can_scan(cleanup_running: bool) -> Result<(), String> {
+    if cleanup_running {
+        return Err("a cleanup is running, wait for it to finish".into());
+    }
+    Ok(())
+}
+
+pub fn check_can_clean(scan_running: bool, cleanup_running: bool) -> Result<(), String> {
+    if scan_running {
+        return Err("a scan is running, wait for it to finish".into());
+    }
+    if cleanup_running {
+        return Err("a cleanup is already running".into());
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -640,5 +848,340 @@ mod tests {
             free: 1,
         };
         assert_eq!(keys(&vol), set(&["mount", "total", "free"]));
+    }
+
+    // ---- cleanup ----
+
+    use devdisk_core::cleanup::{Preview, RecycleBinInfo};
+
+    struct FakeEnv {
+        git: Option<bool>,
+    }
+
+    impl Environment for FakeEnv {
+        fn git_tracked(&self, _path: &Path) -> Option<bool> {
+            self.git
+        }
+        fn recycle_bin(&self, _path: &Path) -> RecycleBinInfo {
+            RecycleBinInfo::Enabled {
+                max_bytes: 100 << 30,
+            }
+        }
+        fn user_profile(&self) -> Option<PathBuf> {
+            None
+        }
+    }
+
+    /// Stands in for the Recycle Bin by deleting inside the test's tempdir.
+    struct FakeMover;
+
+    impl Mover for FakeMover {
+        fn to_recycle_bin(&self, path: &Path) -> Result<(), String> {
+            if path.is_dir() {
+                fs::remove_dir_all(path)
+            } else {
+                fs::remove_file(path)
+            }
+            .map_err(|e| e.to_string())
+        }
+    }
+
+    /// The scanned tree and the log's folder, kept apart so the log is not part of the scan.
+    struct Dirs {
+        root: tempfile::TempDir,
+        _log: tempfile::TempDir,
+    }
+
+    impl Dirs {
+        fn path(&self) -> &Path {
+            self.root.path()
+        }
+    }
+
+    const NOT_TRACKED: FakeEnv = FakeEnv { git: Some(false) };
+
+    /// root/{shop (Next.js, lockfile, node_modules, .next), tool (Rust, target)}
+    fn cleanup_fixture() -> (Dirs, ScanData, CleanupLog) {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        write_text(
+            &r.join("shop/package.json"),
+            r#"{"name":"shop","dependencies":{"next":"14.0.0","react":"18.0.0"}}"#,
+        );
+        write_text(&r.join("shop/package-lock.json"), "{}");
+        write(&r.join("shop/node_modules/dep/index.js"), 20_000);
+        write(&r.join("shop/.next/cache/a.bin"), 30_000);
+        write(&r.join("shop/src/app.js"), 100);
+        write_text(
+            &r.join("tool/Cargo.toml"),
+            "[package]\nname = \"tool\"\nversion = \"0.1.0\"\n",
+        );
+        write(&r.join("tool/target/debug/out.bin"), 50_000);
+        let data = run_scan(r, Arc::new(AtomicBool::new(false)), &NoProgress).unwrap();
+        let log_dir = tempfile::tempdir().unwrap();
+        let log = CleanupLog::open(&log_dir.path().join("log.sqlite")).unwrap();
+        let dir = Dirs {
+            root: dir,
+            _log: log_dir,
+        };
+        (dir, data, log)
+    }
+
+    fn run(
+        data: &ScanData,
+        paths: &[PathBuf],
+        env: &dyn Environment,
+        log: &CleanupLog,
+    ) -> (Vec<RecycleOutcome>, ScanData) {
+        run_cleanup(
+            data,
+            paths,
+            &[],
+            env,
+            &FakeMover,
+            log,
+            "b1",
+            &mut |_, _, _| {},
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn run_cleanup_removes_folders_and_updates_data() {
+        let (dir, data, log) = cleanup_fixture();
+        let r = dir.path();
+        let paths = vec![r.join("shop/node_modules"), r.join("tool/target")];
+        let (outcomes, updated) = run(&data, &paths, &NOT_TRACKED, &log);
+
+        assert!(outcomes.iter().all(|o| o.ok), "{outcomes:?}");
+        assert!(!r.join("shop/node_modules").exists());
+        assert!(!r.join("tool/target").exists());
+        assert!(r.join("shop/.next").exists());
+
+        assert!(updated.tree.find(&r.join("shop/node_modules")).is_none());
+        assert!(updated.tree.find(&r.join("tool/target")).is_none());
+        assert!(updated.tree.find(&r.join("shop/.next")).is_some());
+        assert!(updated.summary.allocated < data.summary.allocated);
+        assert!(updated.summary.size < data.summary.size);
+        assert!(updated.summary.files < data.summary.files);
+        // node_modules, dep, target, debug are gone.
+        assert_eq!(updated.summary.dirs, data.summary.dirs - 4);
+        assert!(updated.summary.reclaimable < data.summary.reclaimable);
+
+        let tool = find_project_by_path(&updated, &r.join("tool").to_string_lossy()).unwrap();
+        assert_eq!(tool.reclaimable_allocated, 0);
+        let shop = find_project_by_path(&updated, &r.join("shop").to_string_lossy()).unwrap();
+        // Only .next is left to reclaim.
+        assert!(shop.reclaimable_allocated > 0);
+        assert!(shop.reclaimable_allocated < 30_000 + 4096 * 4);
+        // The original is untouched.
+        assert!(data.tree.find(&r.join("shop/node_modules")).is_some());
+    }
+
+    #[test]
+    fn reinstall_offer_for_dependency_folder_with_lockfile() {
+        let (dir, data, log) = cleanup_fixture();
+        let r = dir.path();
+        let (outcomes, _) = run(&data, &[r.join("shop/node_modules")], &NOT_TRACKED, &log);
+        let offers = reinstall_offers(&data, &Rules::builtin(), &outcomes);
+        assert_eq!(
+            offers,
+            vec![ReinstallOffer {
+                project_path: r.join("shop").to_string_lossy().into_owned(),
+                command: "npm ci".into(),
+            }]
+        );
+    }
+
+    #[test]
+    fn no_reinstall_offer_for_build_output() {
+        let (dir, data, log) = cleanup_fixture();
+        let r = dir.path();
+        let paths = vec![r.join("shop/.next"), r.join("tool/target")];
+        let (outcomes, _) = run(&data, &paths, &NOT_TRACKED, &log);
+        assert!(outcomes.iter().all(|o| o.ok));
+        assert!(reinstall_offers(&data, &Rules::builtin(), &outcomes).is_empty());
+    }
+
+    #[test]
+    fn reinstall_offers_are_deduplicated_per_project() {
+        let (dir, data, _log) = cleanup_fixture();
+        let r = dir.path();
+        let outcome = |p: PathBuf| RecycleOutcome {
+            path: p,
+            allocated: 1,
+            ok: true,
+            error: None,
+            entry_id: Some(1),
+        };
+        let outcomes = vec![
+            outcome(r.join("shop/node_modules")),
+            outcome(r.join("shop/node_modules")),
+        ];
+        assert_eq!(
+            reinstall_offers(&data, &Rules::builtin(), &outcomes).len(),
+            1
+        );
+    }
+
+    #[test]
+    fn refused_items_are_reported_and_kept() {
+        let (dir, data, log) = cleanup_fixture();
+        let r = dir.path();
+        let other = tempfile::tempdir().unwrap();
+        write(&other.path().join("x/file.bin"), 10);
+
+        let paths = vec![other.path().join("x"), r.join("tool/target")];
+        let (outcomes, updated) = run(&data, &paths, &NOT_TRACKED, &log);
+        let outside = outcomes
+            .iter()
+            .find(|o| o.path.starts_with(other.path()))
+            .unwrap();
+        assert!(!outside.ok);
+        assert!(outside.error.is_some());
+        assert!(other.path().join("x/file.bin").exists());
+        assert!(updated.tree.find(&r.join("tool/target")).is_none());
+
+        let tracked = FakeEnv { git: Some(true) };
+        let (outcomes, updated) = run(&data, &[r.join("shop/node_modules")], &tracked, &log);
+        assert!(!outcomes[0].ok);
+        assert!(r.join("shop/node_modules").exists());
+        assert!(updated.tree.find(&r.join("shop/node_modules")).is_some());
+        assert_eq!(updated.summary.allocated, data.summary.allocated);
+    }
+
+    #[test]
+    fn find_project_by_path_ignores_ascii_case() {
+        let (dir, data, _log) = cleanup_fixture();
+        let shop = dir
+            .path()
+            .join("shop")
+            .to_string_lossy()
+            .to_ascii_uppercase();
+        assert!(find_project_by_path(&data, &shop).is_some());
+        assert!(find_project_by_path(&data, "C:\\nowhere").is_none());
+    }
+
+    #[test]
+    fn batch_ids_are_unique() {
+        let ids: HashSet<String> = (0..1000).map(|_| batch_id()).collect();
+        assert_eq!(ids.len(), 1000);
+    }
+
+    #[test]
+    fn scan_and_cleanup_exclude_each_other() {
+        assert!(check_can_scan(false).is_ok());
+        assert!(check_can_scan(true).is_err());
+        assert!(check_can_clean(false, false).is_ok());
+        assert!(check_can_clean(true, false).unwrap_err().contains("scan"));
+        assert!(check_can_clean(false, true).is_err());
+    }
+
+    #[test]
+    fn cleanup_dto_keys_match_types_ts() {
+        let offer = ReinstallOffer {
+            project_path: "p".into(),
+            command: "npm ci".into(),
+        };
+        assert_eq!(keys(&offer), set(&["projectPath", "command"]));
+        let item = CleanupResultItemDto {
+            path: "p".into(),
+            ok: true,
+            error: None,
+            entry_id: Some(1),
+        };
+        assert_eq!(keys(&item), set(&["path", "ok", "error", "entryId"]));
+        let done = CleanupDoneDto {
+            batch_id: "b".into(),
+            freed: 1,
+            items: vec![item],
+            reinstall: vec![offer],
+        };
+        assert_eq!(
+            keys(&done),
+            set(&["batchId", "freed", "items", "reinstall"])
+        );
+        let progress = CleanupProgressDto {
+            batch_id: "b".into(),
+            done: 0,
+            total: 1,
+            current_path: "p".into(),
+        };
+        assert_eq!(
+            keys(&progress),
+            set(&["batchId", "done", "total", "currentPath"])
+        );
+        let out = ReinstallOutputDto {
+            project_path: "p".into(),
+            stream: "stdout",
+            line: "l".into(),
+        };
+        assert_eq!(keys(&out), set(&["projectPath", "stream", "line"]));
+        let fin = ReinstallDoneDto {
+            project_path: "p".into(),
+            success: true,
+            exit_code: Some(0),
+        };
+        assert_eq!(keys(&fin), set(&["projectPath", "success", "exitCode"]));
+        let restored = RestoreResultDto {
+            id: 1,
+            ok: true,
+            error: None,
+        };
+        assert_eq!(keys(&restored), set(&["id", "ok", "error"]));
+    }
+
+    #[test]
+    fn core_cleanup_types_serialize_like_types_ts() {
+        let (dir, data, log) = cleanup_fixture();
+        let r = dir.path();
+        let rules = Rules::builtin();
+        let ctx = CleanupContext {
+            tree: &data.tree,
+            projects: &data.projects,
+            rules: &rules,
+            protected: &[],
+        };
+        let paths = [r.join("shop/node_modules"), r.join("shop/src/app.js")];
+        let preview: Preview = devdisk_core::cleanup::preview(&ctx, &paths, &NOT_TRACKED).unwrap();
+        assert_eq!(keys(&preview), set(&["items", "totalFreed"]));
+        let json = serde_json::to_value(&preview).unwrap();
+        let items = json["items"].as_array().unwrap();
+        assert_eq!(
+            keys(&preview.items[0]),
+            set(&[
+                "path",
+                "name",
+                "kind",
+                "allocated",
+                "regenerable",
+                "projectPath",
+                "projectLabel",
+                "verdict",
+                "reasons"
+            ])
+        );
+        let kinds: BTreeSet<&str> = items.iter().map(|i| i["kind"].as_str().unwrap()).collect();
+        assert_eq!(kinds, BTreeSet::from(["dir", "file"]));
+        for i in items {
+            assert!(["ok", "warn", "refuse"].contains(&i["verdict"].as_str().unwrap()));
+        }
+
+        run(&data, &[r.join("tool/target")], &NOT_TRACKED, &log);
+        let history = log.list().unwrap();
+        assert_eq!(history.len(), 1);
+        assert_eq!(
+            keys(&history[0]),
+            set(&[
+                "id",
+                "batchId",
+                "deletedAt",
+                "path",
+                "allocated",
+                "projectPath",
+                "projectLabel",
+                "restoredAt"
+            ])
+        );
     }
 }
