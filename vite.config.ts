@@ -16,7 +16,9 @@ export default defineConfig(() => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
+    // Explicit IPv4: plain "localhost" makes newer Node bind IPv6 only ([::1]), and the
+    // app window could then fail its first load and stay white.
+    host: host || "127.0.0.1",
     hmr: host
       ? {
           protocol: "ws",
