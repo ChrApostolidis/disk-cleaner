@@ -881,3 +881,66 @@ fn cleanup_system_environment_reads_real_settings() {
     );
     assert_eq!(SystemEnvironment.git_tracked(&outside), Some(false));
 }
+
+// ---------- whole-project warning ----------
+
+#[test]
+fn warns_when_the_whole_project_folder_is_requested() {
+    let fx = Fixture::new();
+    let item = fx.one("web", &FakeEnv::default());
+    assert_eq!(item.verdict, Verdict::Warn);
+    assert!(reasons_of(&item).contains("whole project folder: includes its source code"));
+    assert!(!reasons_of(&item).contains("contains"));
+}
+
+#[test]
+fn warns_when_a_folder_contains_projects() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().to_path_buf();
+    write(&root.join("group/a/package.json"), 20);
+    write(&root.join("group/b/Cargo.toml"), 20);
+    write(&root.join("group/notes/readme.txt"), 20);
+    let rules = rules(&[]);
+    let res = WalkScanner
+        .scan(&root, &ScanOptions::default(), &NoProgress)
+        .unwrap();
+    let projects = find_projects(&res.tree, &rules);
+    let ctx = CleanupContext {
+        tree: &res.tree,
+        projects: &projects,
+        rules: &rules,
+        protected: &[],
+    };
+    let env = FakeEnv::default();
+    let group = preview(&ctx, &[root.join("group")], &env)
+        .unwrap()
+        .items
+        .remove(0);
+    assert_eq!(group.verdict, Verdict::Warn);
+    assert!(reasons_of(&group).contains("contains 2 projects, including their source code"));
+    // A folder with no project inside gets nothing.
+    let notes = preview(&ctx, &[root.join("group/notes")], &env)
+        .unwrap()
+        .items
+        .remove(0);
+    assert_eq!(notes.verdict, Verdict::Ok);
+}
+
+#[test]
+fn no_project_warning_for_regenerable_folders_or_plain_files() {
+    let fx = Fixture::new();
+    let env = FakeEnv::default();
+    for rel in [
+        "web/dist",
+        "api/target",
+        "web/src/main.js",
+        "loose/file.txt",
+    ] {
+        let item = fx.one(rel, &env);
+        let r = reasons_of(&item);
+        assert!(
+            !r.contains("whole project") && !r.contains("projects, including"),
+            "{rel}: {r}"
+        );
+    }
+}

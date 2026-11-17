@@ -235,6 +235,28 @@ pub fn preview(
         if git.is_none() && project.is_some() {
             reasons.push(warn("could not check git"));
         }
+        // Everything goes to the Recycle Bin, so this is a warning, not a refusal: the point is
+        // that a project folder holds source code that no tool can regenerate.
+        if let Some(id) = node.filter(|&id| ctx.tree.is_live(id)) {
+            if project_at.contains_key(&id) {
+                reasons.push(warn(
+                    "whole project folder: includes its source code, not only files that can be regenerated",
+                ));
+            }
+            let inside = ctx
+                .projects
+                .iter()
+                .filter(|p| {
+                    p.node != id && ctx.tree.is_live(p.node) && is_below(ctx.tree, p.node, id)
+                })
+                .count();
+            if inside > 0 {
+                reasons.push((
+                    Verdict::Warn,
+                    format!("contains {inside} projects, including their source code"),
+                ));
+            }
+        }
 
         let verdict = if reasons.iter().any(|(v, _)| *v == Verdict::Refuse) {
             Verdict::Refuse
@@ -271,6 +293,18 @@ pub fn preview(
         .map(|i| i.allocated)
         .sum();
     Ok(Preview { items, total_freed })
+}
+
+/// True when `node` lies somewhere under `ancestor`.
+fn is_below(tree: &Tree, node: NodeId, ancestor: NodeId) -> bool {
+    let mut cur = tree.node(node).parent;
+    while let Some(c) = cur {
+        if c == ancestor {
+            return true;
+        }
+        cur = tree.node(c).parent;
+    }
+    false
 }
 
 fn human(bytes: u64) -> String {
