@@ -16,6 +16,7 @@ use crate::projects::Project;
 use crate::rules::Rules;
 
 pub use env::{Environment, RecycleBinInfo, SystemEnvironment};
+pub(crate) use log::long_form;
 pub use log::{BinAccess, BinError, CleanupLog, HistoryEntry, RestoreOutcome, SystemBin, restore};
 
 #[derive(Debug, thiserror::Error)]
