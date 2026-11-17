@@ -8,6 +8,7 @@ interface Props {
   /** Changes whenever the dialog switches screen, so focus can be put back on a safe element. */
   phase: string;
   children: ReactNode;
+  wide?: boolean;
 }
 
 const FOCUSABLE = 'button:not(:disabled), [href], input:not(:disabled), [tabindex]:not([tabindex="-1"])';
@@ -16,7 +17,7 @@ const FOCUSABLE = 'button:not(:disabled), [href], input:not(:disabled), [tabinde
  * Focus goes to the first element marked data-initial-focus (a Cancel/Close button), else to the dialog itself.
  * Never to the primary action, so a stray Enter cannot confirm anything.
  */
-export function Modal({ title, labelId, onClose, phase, children }: Props) {
+export function Modal({ title, labelId, onClose, phase, children, wide }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -65,7 +66,7 @@ export function Modal({ title, labelId, onClose, phase, children }: Props) {
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
       <div
         ref={box}
-        className="modal"
+        className={wide ? "modal modal-wide" : "modal"}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelId}

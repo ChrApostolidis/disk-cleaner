@@ -1,5 +1,5 @@
 import { formatBytes, formatCount, truncateMiddle } from "../format";
-import type { ScanProgress } from "../api/types";
+import type { RecycleBinSummary, ScanProgress } from "../api/types";
 
 interface Props {
   root: string;
@@ -11,6 +11,10 @@ interface Props {
   onScan: () => void;
   onCancel: () => void;
   progress: ScanProgress | null;
+  /** A scan is shown, so the action is a rescan. */
+  hasScan: boolean;
+  bin: RecycleBinSummary | null;
+  onBin: () => void;
 }
 
 export function TopBar(p: Props) {
@@ -37,13 +41,21 @@ export function TopBar(p: Props) {
             Choose folder
           </button>
         )}
+        <button
+          className="btn"
+          onClick={p.onBin}
+          disabled={!p.bin}
+          title={p.bin ? `${formatCount(p.bin.items)} ${p.bin.items === 1 ? "item" : "items"} in the Recycle Bin` : undefined}
+        >
+          Recycle Bin · {p.bin ? (p.bin.items === 0 ? "empty" : formatBytes(p.bin.size)) : "…"}
+        </button>
         {p.scanning ? (
           <button className="btn" onClick={p.onCancel}>
             Cancel
           </button>
         ) : (
           <button className="btn btn-primary" onClick={p.onScan} disabled={!p.root.trim()}>
-            Scan
+            {p.hasScan ? "Rescan" : "Scan"}
           </button>
         )}
       </div>

@@ -10,6 +10,8 @@ import type {
   FileSort,
   HistoryEntry,
   Project,
+  RecycleBinItem,
+  RecycleBinSummary,
   ReinstallDone,
   ReinstallOffer,
   ReinstallOutput,
@@ -236,6 +238,7 @@ let volume: VolumeInfo | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 
 function subscribe<T>(set: Listeners<T>, cb: (v: T) => void): Promise<() => void> {
+  boot();
   set.add(cb);
   return Promise.resolve(() => {
     set.delete(cb);
@@ -345,6 +348,74 @@ function applyRemoval(removed: CleanupPreviewItem[]): void {
   if (volume) volume = { ...volume, free: volume.free + freed };
 }
 
+// ---- Recycle Bin ----
+
+const BIN_NAMES = ["node_modules", "target", ".venv", "dist", "build", ".next", "vendor", "cache", "report.pdf", "backup.zip", "render.mp4", "notes.txt", "screenshot.png", "setup.exe", "dump.sql", "old-photos", "Downloads", "draft.docx"];
+let bin: RecycleBinItem[] = [];
+
+function seedBin(): RecycleBinItem[] {
+  const r = rng(31);
+  const now = Date.now();
+  const out: RecycleBinItem[] = history.slice(0, 3).map((h, i) => ({
+    id: `bin-h${i}`,
+    name: h.path.slice(h.path.lastIndexOf("\\") + 1),
+    originalPath: h.path,
+    deletedAt: h.deletedAt,
+    kind: "dir",
+    size: h.allocated,
+    fromDevDisk: true,
+  }));
+  for (let i = 0; i < 57; i++) {
+    const name = BIN_NAMES[Math.floor(r() * BIN_NAMES.length)];
+    const dir = name === "node_modules" || name === "target" || name === ".venv" || name === "dist" || name === "build" || name === ".next" || name === "vendor" || name === "cache";
+    const big = name === "node_modules" ? 200 + r() * 900 : dir ? 20 + r() * 400 : 0.05 + Math.pow(r(), 3) * 300;
+    const parent = `C:\\Users\\you\\${["old-projects", "tmp", "Desktop", "Documents\\work", "school"][Math.floor(r() * 5)]}`;
+    out.push({
+      id: `bin-${i}`,
+      name,
+      originalPath: `${parent}\\${dir ? `proj-${Math.floor(r() * 90 + 10)}\\` : ""}${name}`,
+      deletedAt: now - Math.floor(r() * 60 * DAY) - 5 * 60_000,
+      kind: dir ? "dir" : "file",
+      size: r() < 0.1 ? null : Math.round(big * MB),
+      fromDevDisk: false,
+    });
+  }
+  return out;
+}
+bin = seedBin();
+
+function binSummary(): RecycleBinSummary {
+  return { items: bin.length, size: bin.reduce((a, i) => a + (i.size ?? 0), 0) };
+}
+
+// Stands in for the scan the real backend restores from disk at startup.
+let booted = false;
+let bootTimer: ReturnType<typeof setTimeout> | null = null;
+function boot(): void {
+  if (booted) return;
+  booted = true;
+  const root = MOCK_DEFAULT_ROOT;
+  const at = new Date(Date.now() - DAY);
+  at.setHours(18, 40, 0, 0);
+  const scannedAt = at.getTime();
+  bootTimer = setTimeout(() => {
+    bootTimer = null;
+    const builtProjects = buildProjects(root, scannedAt);
+    const builtFiles = buildFiles(root, scannedAt);
+    projects = builtProjects;
+    files = builtFiles;
+    tree = buildTree(root, builtProjects, new Map(SEEDS.map((x) => [x.name, x.sourceMb])));
+    volume = mockVolume(root);
+    const alloc = builtFiles.reduce((a, f) => a + f.allocated, 0) + builtProjects.reduce((a, p) => a + p.totalAllocated, 0);
+    const s: ScanSummary = {
+      root, files: 184_320, dirs: 21_450, allocated: alloc, size: Math.round(alloc * 0.97), elapsedMs: 38_400,
+      issues: 3, projects: builtProjects.length, reclaimable: builtProjects.reduce((a, p) => a + p.reclaimable, 0), scannedAt,
+    };
+    summary = s;
+    doneL.forEach((cb) => cb(s));
+  }, 400);
+}
+
 const REINSTALL_LINES: [ReinstallOutput["stream"], string][] = [
   ["stdout", "> npm ci"],
   ["stdout", ""],
@@ -364,6 +435,20 @@ const REINSTALL_LINES: [ReinstallOutput["stream"], string][] = [
 ];
 
 export const mockApi: DevDiskApi = {
+  async getRecycleBin() {
+    boot();
+    await delay(60);
+    return binSummary();
+  },
+  async listRecycleBin() {
+    await delay(700);
+    return [...bin].sort((a, b) => (b.size ?? -1) - (a.size ?? -1)).map((i) => ({ ...i }));
+  },
+  async emptyRecycleBin() {
+    await delay(1000);
+    bin = [];
+    return binSummary();
+  },
   async previewCleanup(paths): Promise<CleanupPreview> {
     await delay(150);
     if (!summary) throw "No scan has finished yet.";
@@ -397,6 +482,10 @@ export const mockApi: DevDiskApi = {
           projectPath: i.projectPath, projectLabel: i.projectLabel, restoredAt: null,
         };
         history.push(entry);
+        bin.push({
+          id: `bin-c${entry.id}`, name: i.name, originalPath: i.path, deletedAt: now, kind: i.kind,
+          size: i.allocated, fromDevDisk: true,
+        });
         return { path: i.path, ok: true, error: null, entryId: entry.id };
       });
       // Offers are computed before the removal, while the project data is still there.
@@ -449,6 +538,11 @@ export const mockApi: DevDiskApi = {
   onReinstallOutput: (cb) => subscribe(reinstallOutL, cb),
   onReinstallDone: (cb) => subscribe(reinstallDoneL, cb),
   async startScan(root) {
+    boot();
+    if (bootTimer !== null) {
+      clearTimeout(bootTimer);
+      bootTimer = null;
+    }
     if (timer !== null) throw "A scan is already running.";
     if (!root.trim()) throw "The path is not a folder.";
     const start = Date.now();
@@ -493,6 +587,7 @@ export const mockApi: DevDiskApi = {
         issues: 3,
         projects: builtProjects.length,
         reclaimable: builtProjects.reduce((a, p) => a + p.reclaimable, 0),
+        scannedAt: Date.now(),
       };
       summary = s;
       doneL.forEach((cb) => cb(s));
@@ -505,6 +600,7 @@ export const mockApi: DevDiskApi = {
     errorL.forEach((cb) => cb({ message: "Scan cancelled.", cancelled: true }));
   },
   async getSummary() {
+    boot();
     return summary;
   },
   async listProjects(query) {

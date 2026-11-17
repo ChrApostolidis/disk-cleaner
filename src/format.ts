@@ -70,3 +70,27 @@ export function formatDateTime(ms: number): string {
 export function baseName(path: string): string {
   return path.replace(/[\\/]+$/, "").split(/[\\/]/).pop() ?? path;
 }
+
+const MINUTE = 60_000;
+const HOUR = 3_600_000;
+
+/** "just now", "12 min ago", "3 h ago", "yesterday at 18:40", "3 days ago", then a plain date. */
+export function formatRelative(ms: number, now = Date.now()): string {
+  const diff = Math.max(0, now - ms);
+  if (diff < MINUTE) return "just now";
+  if (diff < HOUR) return `${Math.floor(diff / MINUTE)} min ago`;
+  const d = new Date(ms);
+  const startOfToday = new Date(now).setHours(0, 0, 0, 0);
+  if (ms >= startOfToday && diff < 24 * HOUR) return `${Math.floor(diff / HOUR)} h ago`;
+  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  if (ms >= startOfToday - DAY && ms < startOfToday) return `yesterday at ${time}`;
+  const days = Math.floor((startOfToday - new Date(ms).setHours(0, 0, 0, 0)) / DAY);
+  if (days < 7) return `${days} days ago`;
+  return formatDate(ms);
+}
+
+/** Folder part of an absolute path: the path minus its last segment. */
+export function parentFolder(path: string, name: string): string {
+  const trimmed = path.replace(/[\/]+$/, "");
+  return trimmed.endsWith(name) ? trimmed.slice(0, trimmed.length - name.length).replace(/[\/]+$/, "") : trimmed;
+}

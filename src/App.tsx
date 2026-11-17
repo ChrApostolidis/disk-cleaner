@@ -16,6 +16,8 @@ import { SelectionDrawer } from "./components/SelectionDrawer";
 import { projectItems, totalBytes, withItems, withoutPaths, selectionState, type SelectedItem, type Selection } from "./selection";
 import { CleanupDialog } from "./components/CleanupDialog";
 import { useReinstalls } from "./useReinstalls";
+import { RecycleBinDialog } from "./components/RecycleBinDialog";
+import { useRecycleBin } from "./useRecycleBin";
 import { useDebounced } from "./useDebounced";
 
 type Tab = "projects" | "files" | "map" | "history";
@@ -56,6 +58,10 @@ function App() {
   // Bumped after a cleanup so the map remounts and shows the new tree.
   const [dataVersion, setDataVersion] = useState(0);
   const { reinstalls, startReinstall } = useReinstalls();
+  const { bin, setBin, refresh: refreshBin } = useRecycleBin();
+  const [binOpen, setBinOpen] = useState(false);
+  // Read inside the scan-done handler, which is registered once.
+  const scanningRef = useRef(false);
 
   const setMany = useCallback((items: SelectedItem[], on: boolean) => {
     setSelection((prev) => (on ? withItems(prev, items) : withoutPaths(prev, items.map((i) => i.path))));
@@ -113,6 +119,9 @@ function App() {
     void track(api.onProgress(setProgress));
     void track(
       api.onDone((s) => {
+        // A scan nobody started here is the one restored from disk at startup: show it as the current scan.
+        if (!scanningRef.current) setRoot(s.root);
+        scanningRef.current = false;
         setScanning(false);
         setProgress(null);
         setScanError(null);
@@ -121,6 +130,7 @@ function App() {
     );
     void track(
       api.onError((e) => {
+        scanningRef.current = false;
         setScanning(false);
         setProgress(null);
         setScanError(e);
@@ -182,8 +192,10 @@ function App() {
     setSelection(new Map());
     setDrawerOpen(false);
     setProgress(null);
+    scanningRef.current = true;
     setScanning(true);
     api.startScan(root.trim()).catch((e: unknown) => {
+      scanningRef.current = false;
       setScanning(false);
       setScanError({ message: message(e), cancelled: false });
     });
@@ -211,6 +223,9 @@ function App() {
         onScan={scan}
         onCancel={() => void api.cancelScan()}
         progress={progress}
+        hasScan={summary !== null}
+        bin={bin}
+        onBin={() => setBinOpen(true)}
       />
 
       {scanError && (
@@ -327,6 +342,10 @@ function App() {
           onCleaned={afterCleanup}
           onClose={() => setReviewPaths(null)}
         />
+      )}
+
+      {binOpen && (
+        <RecycleBinDialog bin={bin} onBinChange={setBin} onRefreshBin={refreshBin} onClose={() => setBinOpen(false)} />
       )}
 
       {!summary && !scanning && !scanError && (

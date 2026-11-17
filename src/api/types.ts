@@ -14,7 +14,11 @@ export interface ScanProgress {
   currentPath: string;
 }
 
-/** Payload of the `scan-done` event, and the result of `get_summary`. */
+/**
+ * Payload of the `scan-done` event, and the result of `get_summary`.
+ * At startup the backend loads the last saved scan (if any) in the background and then emits `scan-done` with it,
+ * so a UI that mounted earlier still receives it.
+ */
 export interface ScanSummary {
   root: string;
   files: number;
@@ -28,6 +32,8 @@ export interface ScanSummary {
   projects: number;
   /** Sum of every project's reclaimable size on disk, bytes. */
   reclaimable: number;
+  /** When this scan finished. A scan restored from disk at startup keeps its original time. */
+  scannedAt: UnixMs;
 }
 
 /** Payload of the `scan-error` event. */
@@ -229,6 +235,27 @@ export interface ReinstallDone {
   exitCode: number | null;
 }
 
+/** The Windows Recycle Bin across all drives (not only DevDisk's items). */
+export interface RecycleBinSummary {
+  items: number;
+  /** Bytes, as Windows reports for the whole bin. */
+  size: number;
+}
+
+export interface RecycleBinItem {
+  /** Opaque id for this item. */
+  id: string;
+  name: string;
+  /** Where it was deleted from, e.g. "C:\Users\me\proj\node_modules". */
+  originalPath: string;
+  deletedAt: UnixMs;
+  kind: "file" | "dir";
+  /** Bytes; null when it could not be measured. */
+  size: number | null;
+  /** True when DevDisk's cleanup log has this item (same path, deleted at about the same time). */
+  fromDevDisk: boolean;
+}
+
 /** Tauri command names and their arguments/results. All commands reject with a string message. */
 export interface DevDiskApi {
   /** `start_scan`: starts a background scan; rejects if one is running or the path is not a folder. */
@@ -267,6 +294,15 @@ export interface DevDiskApi {
   onCleanupDone(cb: (d: CleanupDone) => void): Promise<() => void>;
   onReinstallOutput(cb: (o: ReinstallOutput) => void): Promise<() => void>;
   onReinstallDone(cb: (d: ReinstallDone) => void): Promise<() => void>;
+  /** `get_recycle_bin`: fast total for the top-bar indicator. */
+  getRecycleBin(): Promise<RecycleBinSummary>;
+  /** `list_recycle_bin`: everything in the bin, biggest first. Can take a few seconds for large bins. */
+  listRecycleBin(): Promise<RecycleBinItem[]>;
+  /**
+   * `empty_recycle_bin`: PERMANENTLY deletes everything in the Recycle Bin on all drives, then returns the new summary.
+   * Items DevDisk moved there can no longer be put back afterwards.
+   */
+  emptyRecycleBin(): Promise<RecycleBinSummary>;
   /** Event listeners. Each returns an unsubscribe function. */
   onProgress(cb: (p: ScanProgress) => void): Promise<() => void>;
   onDone(cb: (s: ScanSummary) => void): Promise<() => void>;
@@ -298,4 +334,7 @@ export const COMMANDS = {
   listHistory: "list_history",
   restoreEntries: "restore_entries",
   startReinstall: "start_reinstall",
+  getRecycleBin: "get_recycle_bin",
+  listRecycleBin: "list_recycle_bin",
+  emptyRecycleBin: "empty_recycle_bin",
 } as const;
