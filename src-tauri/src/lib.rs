@@ -7,6 +7,10 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(commands::AppState::default())
+        .setup(|app| {
+            commands::load_saved_scan(app.handle().clone());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::start_scan,
             commands::cancel_scan,
@@ -20,6 +24,9 @@ pub fn run() {
             commands::list_history,
             commands::restore_entries,
             commands::start_reinstall,
+            commands::get_recycle_bin,
+            commands::list_recycle_bin,
+            commands::empty_recycle_bin,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

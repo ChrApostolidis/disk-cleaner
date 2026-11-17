@@ -1,17 +1,17 @@
 //! Tauri-free logic: scanning, the stored scan data, and the DTOs the UI receives.
 //! Everything here is unit-testable without a Tauri runtime.
 
+use devdisk_core::bin::{BinItem, BinSummary, RecycleBin, list_items};
 use devdisk_core::cleanup::{
-    CleanupContext, CleanupError, CleanupLog, Environment, Mover, RecycleOutcome, RestoreOutcome,
-    recycle,
+    CleanupContext, CleanupError, CleanupLog, Environment, HistoryEntry, Mover, RecycleOutcome,
+    RestoreOutcome, recycle,
 };
 use devdisk_core::index::{NodeId, NodeKind, Tree};
 use devdisk_core::projects::{Project, find_projects};
 use devdisk_core::rules::Rules;
-use devdisk_core::scanner::{
-    Progress, ProgressSink, ScanError, ScanIssue, ScanOptions, Scanner, WalkScanner,
-};
+use devdisk_core::scanner::{Progress, ProgressSink, ScanError, ScanOptions, Scanner, WalkScanner};
 use devdisk_core::search::{FileSort, Query, filter_projects, find_files};
+use devdisk_core::snapshot::{self, Snapshot, SnapshotError};
 use devdisk_core::treemap::{ProjectIndex, TreemapNode, treemap};
 #[cfg(test)]
 use devdisk_core::{treemap::TreemapKind, volume::VolumeInfo};
@@ -49,6 +49,8 @@ pub struct ScanSummaryDto {
     pub issues: u64,
     pub projects: u64,
     pub reclaimable: u64,
+    /// Unix milliseconds when the scan finished; a restored snapshot keeps its own.
+    pub scanned_at: i64,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -103,10 +105,11 @@ pub struct ScanData {
     pub tree: Tree,
     pub projects: Vec<Project>,
     pub project_index: ProjectIndex,
-    /// Kept for the upcoming issues view; only the count is surfaced today.
-    #[allow(dead_code)]
-    pub issues: Vec<ScanIssue>,
     pub summary: ScanSummaryDto,
+}
+
+pub fn now_ms() -> i64 {
+    unix_ms(SystemTime::now()).unwrap_or(0) as i64
 }
 
 fn unix_ms(t: SystemTime) -> Option<u64> {
@@ -142,7 +145,12 @@ pub fn run_scan(
     };
     let result = WalkScanner.scan(root, &options, sink)?;
     let elapsed_ms = result.elapsed.as_millis() as u64;
-    Ok(build_data(result.tree, result.issues, elapsed_ms))
+    Ok(build_data(
+        result.tree,
+        result.issues.len() as u64,
+        elapsed_ms,
+        now_ms(),
+    ))
 }
 
 fn live_dirs(tree: &Tree) -> u64 {
@@ -154,7 +162,8 @@ fn live_dirs(tree: &Tree) -> u64 {
 
 /// Derives projects, the treemap index and the summary from a tree, so a fresh scan and a
 /// tree that had items detached after a cleanup end up with the same kind of data.
-fn build_data(tree: Tree, issues: Vec<ScanIssue>, elapsed_ms: u64) -> ScanData {
+/// A loaded snapshot only knows how many issues there were, hence the count.
+fn build_data(tree: Tree, issues: u64, elapsed_ms: u64, scanned_at: i64) -> ScanData {
     let projects = find_projects(&tree, &Rules::builtin());
     let root_node = tree.node(tree.root());
     let summary = ScanSummaryDto {
@@ -164,16 +173,16 @@ fn build_data(tree: Tree, issues: Vec<ScanIssue>, elapsed_ms: u64) -> ScanData {
         allocated: root_node.allocated,
         size: root_node.size,
         elapsed_ms,
-        issues: issues.len() as u64,
+        issues,
         projects: projects.len() as u64,
         reclaimable: projects.iter().map(|p| p.reclaimable_allocated).sum(),
+        scanned_at,
     };
     let project_index = ProjectIndex::new(&tree, &projects);
     ScanData {
         tree,
         projects,
         project_index,
-        issues,
         summary,
     }
 }
@@ -450,7 +459,13 @@ pub fn apply_cleanup(data: &ScanData, outcomes: &[RecycleOutcome]) -> ScanData {
             tree.detach(id);
         }
     }
-    build_data(tree, data.issues.clone(), data.summary.elapsed_ms)
+    // The data is still from the original scan, so its time stays.
+    build_data(
+        tree,
+        data.summary.issues,
+        data.summary.elapsed_ms,
+        data.summary.scanned_at,
+    )
 }
 
 /// Runs the checked recycle and returns the outcomes together with the updated scan data.
@@ -475,6 +490,69 @@ pub fn run_cleanup(
     let outcomes = recycle(&ctx, paths, env, mover, log, batch, progress)?;
     let updated = apply_cleanup(data, &outcomes);
     Ok((outcomes, updated))
+}
+
+pub fn snapshot_path(dir: &Path) -> PathBuf {
+    dir.join("last-scan.ddsnap")
+}
+
+pub fn save_scan(path: &Path, data: &ScanData) -> Result<(), SnapshotError> {
+    let s = &data.summary;
+    snapshot::save(path, &data.tree, s.issues, s.elapsed_ms, s.scanned_at)
+}
+
+/// Projects are recomputed from the tree, so a snapshot written under an older rule set
+/// still shows what today's rules detect.
+pub fn data_from_snapshot(snap: Snapshot) -> ScanData {
+    build_data(snap.tree, snap.issues, snap.elapsed_ms, snap.scanned_at)
+}
+
+/// None for a missing file (the normal first run) and for any unreadable one. Bad files are
+/// reported but never deleted: the next successful scan overwrites them anyway.
+pub fn load_saved(path: &Path) -> Option<ScanData> {
+    match snapshot::load(path) {
+        Ok(snap) => Some(data_from_snapshot(snap)),
+        Err(SnapshotError::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => None,
+        Err(e) => {
+            eprintln!("ignoring the saved scan {}: {e}", path.display());
+            None
+        }
+    }
+}
+
+/// A scan the user started while the snapshot was loading is newer, so it always wins.
+pub fn should_apply_snapshot(scan_running: bool, has_data: bool) -> bool {
+    !scan_running && !has_data
+}
+
+pub fn bin_summary(bin: &dyn RecycleBin) -> Result<BinSummary, String> {
+    bin.summary()
+}
+
+/// Entries already restored are no longer in the bin, so they must not mark a lookalike.
+pub fn logged_deletions(history: &[HistoryEntry]) -> Vec<(PathBuf, i64)> {
+    history
+        .iter()
+        .filter(|e| e.restored_at.is_none())
+        .map(|e| (e.path.clone(), e.deleted_at))
+        .collect()
+}
+
+pub fn list_bin(bin: &dyn RecycleBin, history: &[HistoryEntry]) -> Result<Vec<BinItem>, String> {
+    list_items(bin, &logged_deletions(history))
+}
+
+pub fn empty_bin(bin: &dyn RecycleBin) -> Result<BinSummary, String> {
+    bin.empty()?;
+    bin.summary()
+}
+
+/// Items a running cleanup has just moved there would be emptied before they are logged.
+pub fn check_can_empty_bin(cleanup_running: bool) -> Result<(), String> {
+    if cleanup_running {
+        return Err("a cleanup is moving items to the Recycle Bin, wait for it to finish".into());
+    }
+    Ok(())
 }
 
 /// Scan and cleanup both depend on the stored scan, so they never overlap.
@@ -677,7 +755,8 @@ mod tests {
                 "elapsedMs",
                 "issues",
                 "projects",
-                "reclaimable"
+                "reclaimable",
+                "scannedAt"
             ])
         );
         let p = &query_projects(&data, "shop", now).unwrap()[0];
@@ -1183,5 +1262,170 @@ mod tests {
                 "restoredAt"
             ])
         );
+    }
+
+    // ---- snapshot and Recycle Bin ----
+
+    use devdisk_core::bin::{BinItem, BinSummary, RawBinItem, RecycleBin};
+    use std::cell::Cell;
+
+    #[test]
+    fn scanned_at_is_set_by_a_scan_and_kept_by_a_cleanup() {
+        let before = now_ms();
+        let (dir, data, log) = cleanup_fixture();
+        let at = data.summary.scanned_at;
+        assert!(at >= before && at - before < 1000, "{at} vs {before}");
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        let (_, updated) = run(&data, &[dir.path().join("tool/target")], &NOT_TRACKED, &log);
+        assert_eq!(updated.summary.scanned_at, at);
+    }
+
+    #[test]
+    fn snapshot_round_trip_keeps_the_summary_and_projects() {
+        let (_d, data) = fixture();
+        let out = tempfile::tempdir().unwrap();
+        let file = out.path().join("last-scan.ddsnap");
+        save_scan(&file, &data).unwrap();
+        let loaded = load_saved(&file).expect("snapshot loads");
+        assert_eq!(loaded.summary, data.summary);
+        let labels = |d: &ScanData| -> Vec<String> {
+            let mut l: Vec<_> = d.projects.iter().map(|p| p.info.label.clone()).collect();
+            l.sort();
+            l
+        };
+        assert_eq!(labels(&loaded), labels(&data));
+        assert_eq!(loaded.summary.scanned_at, data.summary.scanned_at);
+    }
+
+    #[test]
+    fn a_missing_or_damaged_snapshot_is_ignored() {
+        let out = tempfile::tempdir().unwrap();
+        assert!(load_saved(&out.path().join("nope.ddsnap")).is_none());
+        let junk = out.path().join("junk.ddsnap");
+        fs::write(&junk, b"definitely not a snapshot").unwrap();
+        assert!(load_saved(&junk).is_none());
+        let (_d, data) = fixture();
+        let cut = out.path().join("cut.ddsnap");
+        save_scan(&cut, &data).unwrap();
+        let bytes = fs::read(&cut).unwrap();
+        fs::write(&cut, &bytes[..bytes.len() / 2]).unwrap();
+        assert!(load_saved(&cut).is_none());
+        // The bad files are left alone.
+        assert!(junk.exists() && cut.exists());
+    }
+
+    #[test]
+    fn snapshot_applies_only_to_an_idle_empty_app() {
+        assert!(should_apply_snapshot(false, false));
+        assert!(!should_apply_snapshot(true, false));
+        assert!(!should_apply_snapshot(false, true));
+        assert!(!should_apply_snapshot(true, true));
+    }
+
+    struct FakeBin {
+        raw: Vec<RawBinItem>,
+        emptied: Cell<bool>,
+    }
+
+    impl FakeBin {
+        fn new(raw: Vec<RawBinItem>) -> Self {
+            Self {
+                raw,
+                emptied: Cell::new(false),
+            }
+        }
+    }
+
+    impl RecycleBin for FakeBin {
+        fn summary(&self) -> Result<BinSummary, String> {
+            if self.emptied.get() {
+                return Ok(BinSummary { items: 0, size: 0 });
+            }
+            Ok(BinSummary {
+                items: self.raw.len() as u64,
+                size: self.raw.iter().filter_map(|r| r.size).sum(),
+            })
+        }
+        fn items(&self) -> Result<Vec<RawBinItem>, String> {
+            Ok(self.raw.clone())
+        }
+        fn empty(&self) -> Result<(), String> {
+            self.emptied.set(true);
+            Ok(())
+        }
+    }
+
+    fn raw(name: &str, size: u64, at: i64) -> RawBinItem {
+        RawBinItem {
+            id: format!("id-{name}"),
+            name: name.into(),
+            original_path: PathBuf::from(format!(r"C:\proj\{name}")),
+            deleted_at_ms: at,
+            is_dir: true,
+            size: Some(size),
+        }
+    }
+
+    fn entry(name: &str, at: i64, restored: Option<i64>) -> devdisk_core::cleanup::HistoryEntry {
+        devdisk_core::cleanup::HistoryEntry {
+            id: 1,
+            batch_id: "b".into(),
+            deleted_at: at,
+            path: PathBuf::from(format!(r"C:\proj\{name}")),
+            allocated: 1,
+            project_path: None,
+            project_label: None,
+            restored_at: restored,
+        }
+    }
+
+    #[test]
+    fn bin_list_marks_logged_entries_and_skips_restored_ones() {
+        let bin = FakeBin::new(vec![raw("a", 10, 1_000), raw("b", 20, 2_000)]);
+        let history = vec![entry("a", 1_000, None), entry("b", 2_000, Some(3_000))];
+        let items = list_bin(&bin, &history).unwrap();
+        assert_eq!(items[0].name, "b");
+        assert!(!items[0].from_dev_disk, "restored entry must not count");
+        assert!(items[1].from_dev_disk);
+    }
+
+    #[test]
+    fn empty_bin_returns_the_new_summary() {
+        let bin = FakeBin::new(vec![raw("a", 10, 1_000)]);
+        assert_eq!(bin.summary().unwrap().items, 1);
+        let after = empty_bin(&bin).unwrap();
+        assert_eq!(after, BinSummary { items: 0, size: 0 });
+    }
+
+    #[test]
+    fn emptying_is_refused_while_cleaning() {
+        assert!(check_can_empty_bin(true).unwrap_err().contains("wait"));
+        assert!(check_can_empty_bin(false).is_ok());
+    }
+
+    #[test]
+    fn bin_json_keys_match_the_typescript_contract() {
+        assert_eq!(
+            keys(&BinSummary { items: 1, size: 2 }),
+            set(&["items", "size"])
+        );
+        let items = list_bin(&FakeBin::new(vec![raw("a", 10, 1)]), &[]).unwrap();
+        let item: &BinItem = &items[0];
+        assert_eq!(
+            keys(item),
+            set(&[
+                "id",
+                "name",
+                "originalPath",
+                "deletedAt",
+                "kind",
+                "size",
+                "fromDevDisk"
+            ])
+        );
+        let v = serde_json::to_value(item).unwrap();
+        assert_eq!(v["kind"], "dir");
+        assert_eq!(v["size"], 10);
+        assert_eq!(v["fromDevDisk"], false);
     }
 }

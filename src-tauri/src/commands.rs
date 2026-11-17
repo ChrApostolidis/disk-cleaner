@@ -3,10 +3,12 @@
 use crate::data::{
     CleanupDoneDto, CleanupProgressDto, CleanupResultItemDto, FileEntryDto, ProjectDto,
     ReinstallDoneDto, ReinstallOutputDto, RestoreResultDto, ScanData, ScanErrorDto, ScanSummaryDto,
-    batch_id, check_can_clean, check_can_scan, error_dto, find_project_by_path, freed_bytes,
-    progress_dto, query_files, query_projects, reinstall_offers, restore_dtos, result_items,
-    run_cleanup, run_scan, treemap_at,
+    batch_id, bin_summary, check_can_clean, check_can_empty_bin, check_can_scan, empty_bin,
+    error_dto, find_project_by_path, freed_bytes, list_bin, load_saved, progress_dto, query_files,
+    query_projects, reinstall_offers, restore_dtos, result_items, run_cleanup, run_scan, save_scan,
+    should_apply_snapshot, snapshot_path, treemap_at,
 };
+use devdisk_core::bin::{BinItem, BinSummary, SystemRecycleBin};
 use devdisk_core::cleanup::{
     CleanupContext, CleanupError, CleanupLog, HistoryEntry, Preview, SystemBin, SystemEnvironment,
     TrashMover, preview, restore,
@@ -87,8 +89,11 @@ fn scan_thread(app: AppHandle, root: PathBuf, cancel: Arc<AtomicBool>) {
     match outcome {
         Ok(Ok(data)) => {
             let summary = data.summary.clone();
-            *lock(&app.state::<AppState>().data) = Some(Arc::new(data));
+            let data = Arc::new(data);
+            *lock(&app.state::<AppState>().data) = Some(data.clone());
             let _ = app.emit(EVENT_DONE, summary);
+            // After the event, so writing a big file never delays the UI.
+            persist(&app, &data);
         }
         Ok(Err(e)) => {
             let _ = app.emit(EVENT_ERROR, error_dto(&e));
@@ -102,6 +107,46 @@ fn scan_thread(app: AppHandle, root: PathBuf, cancel: Arc<AtomicBool>) {
                 },
             );
         }
+    }
+}
+
+/// A failed save only costs the instant start next time, so it is logged and nothing else.
+fn persist(app: &AppHandle, data: &ScanData) {
+    match app_data_dir(app) {
+        Ok(dir) => {
+            if let Err(e) = save_scan(&snapshot_path(&dir), data) {
+                eprintln!("could not save the scan: {e}");
+            }
+        }
+        Err(e) => eprintln!("could not save the scan: {e}"),
+    }
+}
+
+/// Reads the last scan off the UI path and shows it, unless the user got there first.
+pub fn load_saved_scan(app: AppHandle) {
+    let spawned = std::thread::Builder::new()
+        .name("devdisk-load".into())
+        .spawn(move || {
+            let Ok(dir) = app_data_dir(&app) else { return };
+            let Some(data) = load_saved(&snapshot_path(&dir)) else {
+                return;
+            };
+            let state = app.state::<AppState>();
+            // `running` first, like everywhere else. Both are held so a scan cannot start
+            // between the check and the store.
+            let running = lock(&state.running);
+            let mut slot = lock(&state.data);
+            if !should_apply_snapshot(running.is_some(), slot.is_some()) {
+                return;
+            }
+            let summary = data.summary.clone();
+            *slot = Some(Arc::new(data));
+            drop(slot);
+            drop(running);
+            let _ = app.emit(EVENT_DONE, summary);
+        });
+    if let Err(e) = spawned {
+        eprintln!("could not start loading the saved scan: {e}");
     }
 }
 
@@ -290,10 +335,13 @@ fn cleanup_thread(
         )
         .map_err(|e| e.to_string())
     }));
+    let mut saved = None;
     let done = match outcome {
         Ok(Ok((outcomes, updated))) => {
             let reinstall = reinstall_offers(&data, &Rules::builtin(), &outcomes);
-            *lock(&app.state::<AppState>().data) = Some(Arc::new(updated));
+            let updated = Arc::new(updated);
+            *lock(&app.state::<AppState>().data) = Some(updated.clone());
+            saved = Some(updated);
             CleanupDoneDto {
                 batch_id: batch,
                 freed: freed_bytes(&outcomes),
@@ -326,6 +374,9 @@ fn cleanup_thread(
     // Release the flag first so a scan started from the done handler is accepted.
     drop(guard);
     let _ = app.emit(EVENT_CLEANUP_DONE, done);
+    if let Some(data) = saved {
+        persist(&app, &data);
+    }
 }
 
 #[tauri::command]
@@ -374,6 +425,38 @@ pub async fn restore_entries(
     .await
     .map_err(|e| format!("restore failed: {e}"))?
     .map(restore_dtos)
+}
+
+#[tauri::command]
+pub async fn get_recycle_bin() -> Result<BinSummary, String> {
+    tauri::async_runtime::spawn_blocking(|| bin_summary(&SystemRecycleBin))
+        .await
+        .map_err(|e| format!("Recycle Bin query failed: {e}"))?
+}
+
+#[tauri::command]
+pub async fn list_recycle_bin(app: AppHandle) -> Result<Vec<BinItem>, String> {
+    // Measuring folders in the bin takes seconds, so keep it off the async runtime.
+    tauri::async_runtime::spawn_blocking(move || {
+        let history = with_log(&app, |log| log.list())?;
+        list_bin(&SystemRecycleBin, &history)
+    })
+    .await
+    .map_err(|e| format!("Recycle Bin listing failed: {e}"))?
+}
+
+#[tauri::command]
+pub async fn empty_recycle_bin(state: State<'_, AppState>) -> Result<BinSummary, String> {
+    // Claim the cleanup slot for the whole empty: checking alone would leave a gap in which
+    // a cleanup could start moving items into the bin while it is being emptied.
+    {
+        let mut cleaning = lock(&state.cleaning);
+        check_can_empty_bin(*cleaning)?;
+        *cleaning = true;
+    }
+    let result = tauri::async_runtime::spawn_blocking(|| empty_bin(&SystemRecycleBin)).await;
+    *lock(&state.cleaning) = false;
+    result.map_err(|e| format!("emptying the Recycle Bin failed: {e}"))?
 }
 
 /// Removes the project's "reinstall running" mark on every exit path.
