@@ -9,6 +9,7 @@ import type {
   FileEntry,
   FileSort,
   HistoryEntry,
+  InstalledApp,
   Project,
   RecycleBinItem,
   RecycleBinSummary,
@@ -434,7 +435,43 @@ const REINSTALL_LINES: [ReinstallOutput["stream"], string][] = [
   ["stdout", "done"],
 ];
 
+// [name, publisher, version, kind, folder (null = unknown), MB (null = unknown), measured by the scan, days since install]
+const APP_SEEDS: [string, string | null, string | null, InstalledApp["kind"], string | null, number | null, boolean, number | null][] = [
+  ["Docker Desktop", "Docker Inc.", "4.48.0", "desktop", "C:\\Program Files\\Docker\\Docker", 2867, true, 40],
+  ["Microsoft Visual Studio Code (User)", "Microsoft Corporation", "1.106.0", "desktop", "C:\\Users\\you\\AppData\\Local\\Programs\\Microsoft VS Code", 1082, true, 12],
+  ["Android Studio", "Google LLC", "2026.1", "desktop", "C:\\Program Files\\Android\\Android Studio", 3410, false, null],
+  ["Node.js", "Node.js Foundation", "24.11.0", "desktop", "C:\\Program Files\\nodejs", 98, true, 90],
+  ["Git", "The Git Development Community", "2.45.2", "desktop", "C:\\Program Files\\Git", 340, false, 400],
+  ["PostgreSQL 18", "PostgreSQL Global Development Group", "18.0", "desktop", "C:\\Program Files\\PostgreSQL\\18", 1047, false, 70],
+  ["7-Zip 24.09 (x64)", "Igor Pavlov", "24.09", "desktop", "C:\\Program Files\\7-Zip", 5.6, false, null],
+  ["Obsidian", "Obsidian", "1.9.12", "desktop", "C:\\Users\\you\\AppData\\Local\\Programs\\Obsidian", 1104, true, 200],
+  ["Microsoft .NET SDK 10.0.204 (x64)", "Microsoft Corporation", "10.0.204", "desktop", null, 1204, false, 30],
+  ["Some Old Tool", null, null, "desktop", null, null, false, null],
+  ["Windows Terminal", null, "1.23.12811.0", "store", "C:\\Program Files\\WindowsApps\\Microsoft.WindowsTerminal_1.23.12811.0_x64__8wekyb3d8bbwe", null, false, null],
+  ["Spotify", null, "1.2.74.477.0", "store", "C:\\Program Files\\WindowsApps\\SpotifyAB.SpotifyMusic_1.2.74.477.0_x86__zpdnekdrzrea0", null, false, null],
+  ["Calculator", null, "11.2508.4.0", "store", "C:\\Program Files\\WindowsApps\\Microsoft.WindowsCalculator_11.2508.4.0_x64__8wekyb3d8bbwe", null, false, null],
+];
+
+function mockApps(now: number): InstalledApp[] {
+  const apps = APP_SEEDS.map(([name, publisher, version, kind, location, mb, scanned, days], i): InstalledApp => ({
+    id: `mock-app-${i}`,
+    name,
+    publisher,
+    version,
+    kind,
+    location,
+    installedAt: days === null ? null : Math.floor((now - days * DAY) / DAY) * DAY,
+    size: mb === null ? null : Math.round(mb * MB),
+    sizeSource: mb === null ? null : scanned && summary ? "scan" : "windows",
+  }));
+  return apps.sort((a, b) => (b.size ?? -1) - (a.size ?? -1) || a.name.localeCompare(b.name));
+}
+
 export const mockApi: DevDiskApi = {
+  async listApps() {
+    await delay(500);
+    return mockApps(Date.now());
+  },
   async getRecycleBin() {
     boot();
     await delay(60);

@@ -256,6 +256,26 @@ export interface RecycleBinItem {
   fromDevDisk: boolean;
 }
 
+export type AppKind = "desktop" | "store";
+
+/** An installed app: a classic desktop program or a Microsoft Store app. */
+export interface InstalledApp {
+  /** Registry key or package full name; stable while the app stays installed. */
+  id: string;
+  name: string;
+  publisher: string | null;
+  version: string | null;
+  kind: AppKind;
+  /** Install folder, for "Show in Explorer". Sometimes guessed from the app's icon path. */
+  location: string | null;
+  /** Install day (midnight UTC); null when Windows does not record it (always for Store apps). */
+  installedAt: UnixMs | null;
+  /** Bytes; null when unknown. */
+  size: number | null;
+  /** "scan": measured from the current scan. "windows": the installer's own estimate. */
+  sizeSource: "scan" | "windows" | null;
+}
+
 /** Tauri command names and their arguments/results. All commands reject with a string message. */
 export interface DevDiskApi {
   /** `start_scan`: starts a background scan; rejects if one is running or the path is not a folder. */
@@ -303,6 +323,11 @@ export interface DevDiskApi {
    * Items DevDisk moved there can no longer be put back afterwards.
    */
   emptyRecycleBin(): Promise<RecycleBinSummary>;
+  /**
+   * `list_apps`: installed desktop and Store apps, biggest first (unknown size last). Works before a scan;
+   * an app's folder is measured only when the current scan covers it.
+   */
+  listApps(): Promise<InstalledApp[]>;
   /** Event listeners. Each returns an unsubscribe function. */
   onProgress(cb: (p: ScanProgress) => void): Promise<() => void>;
   onDone(cb: (s: ScanSummary) => void): Promise<() => void>;
@@ -337,4 +362,5 @@ export const COMMANDS = {
   getRecycleBin: "get_recycle_bin",
   listRecycleBin: "list_recycle_bin",
   emptyRecycleBin: "empty_recycle_bin",
+  listApps: "list_apps",
 } as const;

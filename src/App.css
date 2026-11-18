@@ -208,6 +208,19 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .progress-text { flex-wrap: wrap; }
 }
 
+/* Apps tab */
+.apps { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.apps-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.apps-note { margin: 0; }
+.trow.apps-row { grid-template-columns: minmax(160px, 2.4fr) minmax(100px, 1.6fr) minmax(70px, 1fr) 100px 108px 130px; }
+.app-name { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.app-name .ellipsis { min-width: 0; }
+.app-name .tag, .apps-row .tag { font-weight: 400; flex-shrink: 0; }
+
+@media (max-width: 900px) {
+  .trow.apps-row { grid-template-columns: minmax(120px, 2fr) minmax(70px, 1fr) minmax(60px, 0.8fr) 88px 96px 110px; }
+}
+
 /* Map tab */
 .map-host { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .map-host[hidden] { display: none; }

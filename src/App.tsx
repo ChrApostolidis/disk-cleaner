@@ -11,6 +11,7 @@ import { ProjectsTab } from "./components/ProjectsTab";
 import { FilesTab } from "./components/FilesTab";
 import { Treemap } from "./components/Treemap";
 import { HistoryTab } from "./components/HistoryTab";
+import { AppsTab } from "./components/AppsTab";
 import { SelectionBar } from "./components/SelectionBar";
 import { SelectionDrawer } from "./components/SelectionDrawer";
 import { projectItems, totalBytes, withItems, withoutPaths, selectionState, type SelectedItem, type Selection } from "./selection";
@@ -20,7 +21,7 @@ import { RecycleBinDialog } from "./components/RecycleBinDialog";
 import { useRecycleBin } from "./useRecycleBin";
 import { useDebounced } from "./useDebounced";
 
-type Tab = "projects" | "files" | "map" | "history";
+type Tab = "projects" | "files" | "map" | "history" | "apps";
 
 const FILE_LIMIT = 500;
 
@@ -153,7 +154,7 @@ function App() {
 
   // Refetch the visible tab whenever the query, sort or scan changes; stale replies are dropped.
   useEffect(() => {
-    if (!summary || tab === "map" || tab === "history") return;
+    if (!summary || tab === "map" || tab === "history" || tab === "apps") return;
     const id = ++requestId.current;
     const work =
       tab === "projects"
@@ -259,6 +260,9 @@ function App() {
               <button role="tab" aria-selected={tab === "history"} className="tab" onClick={() => setTab("history")}>
                 History
               </button>
+              <button role="tab" aria-selected={tab === "apps"} className="tab" onClick={() => setTab("apps")}>
+                Apps
+              </button>
             </div>
           </div>
           {(tab === "projects" || tab === "files") && <SearchBar value={query} onChange={setQuery} error={searchError} />}
@@ -273,7 +277,10 @@ function App() {
                 />
               </div>
             )}
-            {tab === "map" ? null : tab === "history" ? (
+            {tab === "map" ? null : tab === "apps" ? (
+              // Remounted per scan and cleanup, since app sizes come from the scan.
+              <AppsTab key={`${summary.scannedAt}|${dataVersion}`} />
+            ) : tab === "history" ? (
               // Keyed by dataVersion: a cleanup started from the selection bar while this tab is
               // open must show up here without switching tabs.
               <HistoryTab key={dataVersion} />
