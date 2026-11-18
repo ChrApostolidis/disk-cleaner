@@ -291,6 +291,15 @@ pub fn query_files(
     Ok(file_dtos(data, &ids))
 }
 
+/// Size on disk of a scanned folder, for sizing installed apps. None before a scan, for a
+/// file, or for a folder the scan does not cover.
+pub fn folder_size_in_scan(data: Option<&ScanData>, path: &Path) -> Option<u64> {
+    let data = data?;
+    let id = data.tree.find(path)?;
+    let node = data.tree.node(id);
+    (node.kind == NodeKind::Dir).then_some(node.allocated)
+}
+
 /// The folder at `path` with children `depth` levels deep (clamped to 1..=3).
 pub fn treemap_at(data: &ScanData, path: &str, depth: u32) -> Result<TreemapNode, String> {
     let id = data
@@ -667,6 +676,23 @@ mod tests {
         assert_eq!(tool.ecosystems, vec!["rust".to_string()]);
         // Biggest reclaimable first: target (50k) before node_modules (20k).
         assert_eq!(all[0].name, "tool");
+    }
+
+    #[test]
+    fn app_folder_size_comes_from_the_scan_only_for_scanned_folders() {
+        let (dir, data) = fixture();
+        let shop = data.tree.find(&dir.path().join("shop")).unwrap();
+        // Install locations often differ in case and end with a backslash.
+        let spelled = PathBuf::from(format!("{}\\", dir.path().join("SHOP").display()));
+        assert_eq!(
+            folder_size_in_scan(Some(&data), &spelled),
+            Some(data.tree.node(shop).allocated)
+        );
+        let file = dir.path().join("docs").join("big.bin");
+        assert_eq!(folder_size_in_scan(Some(&data), &file), None, "a file");
+        let missing = dir.path().join("nope");
+        assert_eq!(folder_size_in_scan(Some(&data), &missing), None);
+        assert_eq!(folder_size_in_scan(None, &spelled), None, "no scan yet");
     }
 
     #[test]

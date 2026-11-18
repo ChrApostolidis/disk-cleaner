@@ -4,10 +4,11 @@ use crate::data::{
     CleanupDoneDto, CleanupProgressDto, CleanupResultItemDto, FileEntryDto, ProjectDto,
     ReinstallDoneDto, ReinstallOutputDto, RestoreResultDto, ScanData, ScanErrorDto, ScanSummaryDto,
     batch_id, bin_summary, check_can_clean, check_can_empty_bin, check_can_scan, empty_bin,
-    error_dto, find_project_by_path, freed_bytes, list_bin, load_saved, progress_dto, query_files,
-    query_projects, reinstall_offers, restore_dtos, result_items, run_cleanup, run_scan, save_scan,
-    should_apply_snapshot, snapshot_path, treemap_at,
+    error_dto, find_project_by_path, folder_size_in_scan, freed_bytes, list_bin, load_saved,
+    progress_dto, query_files, query_projects, reinstall_offers, restore_dtos, result_items,
+    run_cleanup, run_scan, save_scan, should_apply_snapshot, snapshot_path, treemap_at,
 };
+use devdisk_core::apps::{AppEntry, SystemApps, list_apps as list_installed_apps};
 use devdisk_core::bin::{BinItem, BinSummary, SystemRecycleBin};
 use devdisk_core::cleanup::{
     CleanupContext, CleanupError, CleanupLog, HistoryEntry, Preview, SystemBin, SystemEnvironment,
@@ -457,6 +458,21 @@ pub async fn empty_recycle_bin(state: State<'_, AppState>) -> Result<BinSummary,
     let result = tauri::async_runtime::spawn_blocking(|| empty_bin(&SystemRecycleBin)).await;
     *lock(&state.cleaning) = false;
     result.map_err(|e| format!("emptying the Recycle Bin failed: {e}"))?
+}
+
+#[tauri::command]
+pub async fn list_apps(state: State<'_, AppState>) -> Result<Vec<AppEntry>, String> {
+    let data = state.current();
+    // Reading a few hundred registry keys and package names takes a moment.
+    tauri::async_runtime::spawn_blocking(move || {
+        let windows = std::env::var_os("SystemRoot")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from(r"C:\Windows"));
+        let in_scan = |p: &std::path::Path| folder_size_in_scan(data.as_deref(), p);
+        list_installed_apps(&SystemApps, &in_scan, &windows)
+    })
+    .await
+    .map_err(|e| format!("listing apps failed: {e}"))?
 }
 
 /// Removes the project's "reinstall running" mark on every exit path.
