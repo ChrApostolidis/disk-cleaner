@@ -6,6 +6,7 @@ use devdisk_core::cleanup::{
     CleanupContext, CleanupError, CleanupLog, Environment, HistoryEntry, Mover, RecycleOutcome,
     RestoreOutcome, recycle,
 };
+use devdisk_core::devtools::DevSizeSource;
 use devdisk_core::index::{NodeId, NodeKind, Tree};
 use devdisk_core::projects::{Project, find_projects};
 use devdisk_core::rules::Rules;
@@ -298,6 +299,28 @@ pub fn folder_size_in_scan(data: Option<&ScanData>, path: &Path) -> Option<u64> 
     let id = data.tree.find(path)?;
     let node = data.tree.node(id);
     (node.kind == NodeKind::Dir).then_some(node.allocated)
+}
+
+/// Size on disk of a language or tool folder: from the scan when it covers the folder,
+/// otherwise walked now (SDKs and toolchains usually live outside the scanned root).
+pub fn dev_folder_size(data: Option<&ScanData>, path: &Path) -> Option<(u64, DevSizeSource)> {
+    if let Some(n) = folder_size_in_scan(data, path) {
+        return Some((n, DevSizeSource::Scan));
+    }
+    if !path.is_dir() {
+        return None;
+    }
+    let res = WalkScanner
+        .scan(
+            path,
+            &ScanOptions::default(),
+            &devdisk_core::scanner::NoProgress,
+        )
+        .ok()?;
+    Some((
+        res.tree.node(res.tree.root()).allocated,
+        DevSizeSource::Measured,
+    ))
 }
 
 /// The folder at `path` with children `depth` levels deep (clamped to 1..=3).
@@ -693,6 +716,51 @@ mod tests {
         let missing = dir.path().join("nope");
         assert_eq!(folder_size_in_scan(Some(&data), &missing), None);
         assert_eq!(folder_size_in_scan(None, &spelled), None, "no scan yet");
+    }
+
+    #[test]
+    fn dev_tool_folders_use_the_scan_when_it_covers_them_and_are_walked_otherwise() {
+        let (dir, data) = fixture();
+        let shop = data.tree.find(&dir.path().join("shop")).unwrap();
+        assert_eq!(
+            dev_folder_size(Some(&data), &dir.path().join("shop")),
+            Some((data.tree.node(shop).allocated, DevSizeSource::Scan))
+        );
+        let outside = tempfile::tempdir().unwrap();
+        write(&outside.path().join("sdk").join("a.bin"), 5000);
+        let (size, source) = dev_folder_size(Some(&data), &outside.path().join("sdk")).unwrap();
+        assert_eq!(source, DevSizeSource::Measured);
+        assert!(size >= 5000, "{size}");
+        assert_eq!(
+            dev_folder_size(None, &outside.path().join("sdk")).map(|(_, s)| s),
+            Some(DevSizeSource::Measured),
+            "no scan yet: walked"
+        );
+        assert_eq!(
+            dev_folder_size(Some(&data), &outside.path().join("missing")),
+            None
+        );
+    }
+
+    // Reads this PC: installed languages and tools, with every folder walked.
+    #[test]
+    #[ignore = "reads and measures this PC's languages and tools"]
+    fn real_dev_tools_with_sizes() {
+        use devdisk_core::devtools::{DevEnv, ToolRules, detect};
+        let t = std::time::Instant::now();
+        let measure = |p: &Path| dev_folder_size(None, p);
+        let (langs, tools) = detect(&DevEnv::system(Vec::new()), &ToolRules::builtin(), &measure);
+        println!("measured in {:?}", t.elapsed());
+        for i in langs.iter().chain(&tools) {
+            let gb = |b: Option<u64>| {
+                b.map(|b| format!("{:.2} GB", b as f64 / 1e9))
+                    .unwrap_or("-".into())
+            };
+            println!("{:<22} {:>10}", i.name, gb(i.size));
+            for x in &i.installs {
+                println!("    {:<44} {:>10}", x.label, gb(x.size));
+            }
+        }
     }
 
     #[test]

@@ -28,6 +28,7 @@ pub fn run() {
             commands::list_recycle_bin,
             commands::empty_recycle_bin,
             commands::list_apps,
+            commands::list_dev_tools,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
