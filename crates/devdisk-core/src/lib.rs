@@ -7,6 +7,8 @@ pub mod cleanup;
 pub mod detect;
 pub mod index;
 pub mod projects;
+#[cfg(windows)]
+mod reg;
 pub mod rules;
 pub mod scanner;
 pub mod search;
