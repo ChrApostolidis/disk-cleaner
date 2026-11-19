@@ -1,7 +1,7 @@
 //! Scanner trait and the standard parallel directory walker (WalkScanner).
 
 use crate::index::{Tree, TreeBuilder};
-use jwalk::{ClientState, WalkDirGeneric};
+use jwalk::{ClientState, Parallelism, WalkDirGeneric};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -14,6 +14,9 @@ pub struct ScanOptions {
     pub cancel: Option<Arc<AtomicBool>>,
     /// Minimum time between progress reports. Default 100 ms.
     pub progress_interval: Duration,
+    /// How long a walk waits for a free worker thread in the shared pool (other walks can
+    /// hold it) before giving up with `ScanError::Busy`. Default 2 minutes.
+    pub pool_wait: Duration,
 }
 
 impl Default for ScanOptions {
@@ -21,6 +24,7 @@ impl Default for ScanOptions {
         Self {
             cancel: None,
             progress_interval: Duration::from_millis(100),
+            pool_wait: Duration::from_secs(120),
         }
     }
 }
@@ -72,6 +76,8 @@ pub enum ScanError {
     RootNotADirectory(PathBuf),
     #[error("scan cancelled")]
     Cancelled,
+    #[error("the scanner was too busy with other folders; try again")]
+    Busy,
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }
@@ -262,6 +268,11 @@ impl Scanner for WalkScanner {
         let cluster = cluster_size(root);
         let cancel = options.cancel.clone();
         let walker = WalkDirGeneric::<WalkState>::new(root)
+            // Walks share rayon's pool. jwalk gives up when it waits longer than this for a
+            // thread (1 s by default), and the walk would then silently come back short.
+            .parallelism(Parallelism::RayonDefaultPool {
+                busy_timeout: options.pool_wait,
+            })
             .follow_links(false)
             .skip_hidden(false)
             .sort(false)
@@ -289,6 +300,9 @@ impl Scanner for WalkScanner {
         for result in walker {
             let entry = match result {
                 Ok(e) => e,
+                // Not a problem with one folder: the walk stopped, so whatever was counted
+                // so far would be too small.
+                Err(e) if e.is_busy() => return Err(ScanError::Busy),
                 Err(e) => {
                     let kind = e.io_error().map_or(io::ErrorKind::Other, io::Error::kind);
                     issues.push(ScanIssue {
@@ -555,5 +569,53 @@ mod tests {
             .collect();
         assert_eq!(links.len(), 1);
         assert!(links[0].path.ends_with("link"));
+    }
+
+    /// Keeps every thread of rayon's shared pool busy for `hold`, the way another
+    /// walk running at the same time does, and returns once they all are.
+    fn occupy_shared_pool(hold: Duration) {
+        use std::sync::atomic::AtomicUsize;
+        let n = jwalk::rayon::current_num_threads();
+        let started = Arc::new(AtomicUsize::new(0));
+        for _ in 0..n {
+            let started = started.clone();
+            jwalk::rayon::spawn(move || {
+                started.fetch_add(1, Ordering::SeqCst);
+                std::thread::sleep(hold);
+            });
+        }
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while started.load(Ordering::SeqCst) < n && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+
+    fn small_tree() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        write(&dir.path().join("a/b/one.bin"), 10);
+        write(&dir.path().join("a/two.bin"), 10);
+        write(&dir.path().join("three.bin"), 10);
+        dir
+    }
+
+    #[test]
+    fn a_walk_waits_for_a_busy_shared_pool_instead_of_returning_a_partial_result() {
+        let dir = small_tree();
+        occupy_shared_pool(Duration::from_millis(1600));
+        let res = scan(dir.path());
+        assert_eq!(res.tree.node(res.tree.root()).file_count, 3);
+        assert!(res.issues.is_empty(), "{:?}", res.issues);
+    }
+
+    #[test]
+    fn a_walk_that_cannot_get_a_worker_in_time_fails_instead_of_reporting_less() {
+        let dir = small_tree();
+        occupy_shared_pool(Duration::from_millis(1500));
+        let opts = ScanOptions {
+            pool_wait: Duration::from_millis(100),
+            ..Default::default()
+        };
+        let err = WalkScanner.scan(dir.path(), &opts, &NoProgress).err();
+        assert!(matches!(err, Some(ScanError::Busy)), "{err:?}");
     }
 }
