@@ -6,6 +6,8 @@ import type {
   CleanupProgress,
   CleanupResultItem,
   DevDiskApi,
+  DevInstall,
+  DevItem,
   FileEntry,
   FileSort,
   HistoryEntry,
@@ -467,7 +469,76 @@ function mockApps(now: number): InstalledApp[] {
   return apps.sort((a, b) => (b.size ?? -1) - (a.size ?? -1) || a.name.localeCompare(b.name));
 }
 
+const GB = 1024 * MB;
+
+function devItem(id: string, name: string, kind: DevItem["kind"], installs: Partial<DevInstall>[]): DevItem {
+  const full = installs.map(
+    (i): DevInstall => ({ label: "", version: null, path: null, active: false, size: null, sizeSource: null, ...i }),
+  );
+  const known = full.filter((i) => i.size !== null);
+  return { id, name, kind, installs: full, size: known.length ? known.reduce((a, i) => a + (i.size ?? 0), 0) : null };
+}
+
+function bySize(items: DevItem[]): DevItem[] {
+  return items.sort((a, b) => (b.size ?? -1) - (a.size ?? -1) || a.name.localeCompare(b.name));
+}
+
+const HOME = "C:\\Users\\you";
+
+function mockDevTools() {
+  const languages = bySize([
+    devItem("node", "Node.js", "language", [
+      { label: "v24.22.1", version: "24.22.1", path: `${HOME}\\AppData\\Local\\nvm\\v24.22.1`, active: true, size: 0.36 * GB, sizeSource: "measured" },
+      { label: "v20.11.0", version: "20.11.0", path: `${HOME}\\AppData\\Local\\nvm\\v20.11.0`, size: 0.31 * GB, sizeSource: "measured" },
+      { label: "v16.20.2", version: "16.20.2", path: `${HOME}\\AppData\\Local\\nvm\\v16.20.2`, size: 0.27 * GB, sizeSource: "measured" },
+    ]),
+    devItem(".net", ".NET SDK", "language", [
+      { label: "10.0.204", version: "10.0.204", path: "C:\\Program Files\\dotnet\\sdk\\10.0.204", active: true, size: 0.43 * GB, sizeSource: "measured" },
+      { label: "9.0.201", version: "9.0.201", path: "C:\\Program Files\\dotnet\\sdk\\9.0.201", size: 0.41 * GB, sizeSource: "measured" },
+      { label: "8.0.404", version: "8.0.404", path: "C:\\Program Files\\dotnet\\sdk\\8.0.404", size: 0.39 * GB, sizeSource: "measured" },
+    ]),
+    devItem("rust", "Rust", "language", [
+      { label: "stable-x86_64-pc-windows-msvc", version: "1.100.0", path: `${HOME}\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc`, active: true, size: 1.7 * GB, sizeSource: "measured" },
+    ]),
+    devItem("python", "Python", "language", [
+      { label: "Python312", version: "3.12.4", path: `${HOME}\\AppData\\Local\\Programs\\Python\\Python312`, active: true, size: 0.22 * GB, sizeSource: "scan" },
+      { label: "Python311", version: "3.11.9", path: `${HOME}\\AppData\\Local\\Programs\\Python\\Python311`, size: 0.21 * GB, sizeSource: "scan" },
+    ]),
+    devItem("java", "Java", "language", [
+      { label: "jdk-25", version: "25.0.1", path: "C:\\Program Files\\Java\\jdk-25", active: true, size: 0.38 * GB, sizeSource: "measured" },
+    ]),
+    devItem("php", "PHP", "language", [
+      { label: "php-8.5.4", version: "8.5.4", path: "C:\\php-8.5.4", active: true, size: 0.1 * GB, sizeSource: "measured" },
+      { label: "php", version: "8.2.12", path: "C:\\xampp\\php", size: 0.19 * GB, sizeSource: "measured" },
+    ]),
+  ]);
+  const tools = bySize([
+    devItem("android", "Android", "tool", [
+      { label: "Android Studio", version: "2026.1", path: "C:\\Program Files\\Android\\Android Studio", size: 3.4 * GB, sizeSource: "windows" },
+      { label: "Android SDK", path: `${HOME}\\AppData\\Local\\Android\\Sdk`, size: 10.45 * GB, sizeSource: "measured" },
+      { label: "Emulators (AVDs)", path: `${HOME}\\.android\\avd`, size: 7.69 * GB, sizeSource: "measured" },
+    ]),
+    devItem("docker", "Docker Desktop", "tool", [
+      { label: "Docker Desktop", version: "4.48.0", path: "C:\\Program Files\\Docker\\Docker", size: 2.8 * GB, sizeSource: "windows" },
+      { label: "Docker disks (images, containers, volumes)", path: `${HOME}\\AppData\\Local\\Docker\\wsl`, size: 4.68 * GB, sizeSource: "measured" },
+    ]),
+    devItem("vscode", "Visual Studio Code", "tool", [
+      { label: "Microsoft Visual Studio Code (User)", version: "1.106.0", path: `${HOME}\\AppData\\Local\\Programs\\Microsoft VS Code`, size: 1.08 * GB, sizeSource: "scan" },
+      { label: "Extensions", path: `${HOME}\\.vscode\\extensions`, size: 1.04 * GB, sizeSource: "measured" },
+    ]),
+    devItem("git", "Git", "tool", [
+      { label: "Git", version: "2.45.2", path: "C:\\Program Files\\Git", size: 0.34 * GB, sizeSource: "windows" },
+    ]),
+    devItem("visual-studio", "Visual Studio", "tool", [{ label: "Visual Studio Community 2022", version: "17.14.4" }]),
+  ]);
+  return { languages, tools };
+}
+
 export const mockApi: DevDiskApi = {
+  async listDevTools() {
+    await delay(1200);
+    return mockDevTools();
+  },
   async listApps() {
     await delay(500);
     return mockApps(Date.now());

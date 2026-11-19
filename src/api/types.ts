@@ -276,6 +276,38 @@ export interface InstalledApp {
   sizeSource: "scan" | "windows" | null;
 }
 
+/** "scan": from the current scan. "measured": walked when listed. "windows": the installer's estimate. */
+export type DevSizeSource = "scan" | "measured" | "windows";
+
+/** One installed version of a language, or one part of a tool (the app, its data folders). */
+export interface DevInstall {
+  /** e.g. "v24.22.1", "stable-x86_64-pc-windows-msvc", "Extensions". */
+  label: string;
+  version: string | null;
+  path: string | null;
+  /** The version that runs when you type the command (first on PATH, rustup default, newest SDK). */
+  active: boolean;
+  /** Bytes; null when unknown. */
+  size: number | null;
+  sizeSource: DevSizeSource | null;
+}
+
+export interface DevItem {
+  /** e.g. "node", ".net", "docker". */
+  id: string;
+  /** e.g. "Node.js", "Docker Desktop". */
+  name: string;
+  kind: "language" | "tool";
+  installs: DevInstall[];
+  /** Sum of the known install sizes; null when none is known. */
+  size: number | null;
+}
+
+export interface DevTools {
+  languages: DevItem[];
+  tools: DevItem[];
+}
+
 /** Tauri command names and their arguments/results. All commands reject with a string message. */
 export interface DevDiskApi {
   /** `start_scan`: starts a background scan; rejects if one is running or the path is not a folder. */
@@ -328,6 +360,11 @@ export interface DevDiskApi {
    * an app's folder is measured only when the current scan covers it.
    */
   listApps(): Promise<InstalledApp[]>;
+  /**
+   * `list_dev_tools`: installed languages (every version) and developer tools, each biggest first.
+   * Folders the scan does not cover are measured on the spot, so this can take several seconds.
+   */
+  listDevTools(): Promise<DevTools>;
   /** Event listeners. Each returns an unsubscribe function. */
   onProgress(cb: (p: ScanProgress) => void): Promise<() => void>;
   onDone(cb: (s: ScanSummary) => void): Promise<() => void>;
@@ -363,4 +400,5 @@ export const COMMANDS = {
   listRecycleBin: "list_recycle_bin",
   emptyRecycleBin: "empty_recycle_bin",
   listApps: "list_apps",
+  listDevTools: "list_dev_tools",
 } as const;

@@ -12,6 +12,7 @@ import { FilesTab } from "./components/FilesTab";
 import { Treemap } from "./components/Treemap";
 import { HistoryTab } from "./components/HistoryTab";
 import { AppsTab } from "./components/AppsTab";
+import { DevToolsTab } from "./components/DevToolsTab";
 import { SelectionBar } from "./components/SelectionBar";
 import { SelectionDrawer } from "./components/SelectionDrawer";
 import { projectItems, totalBytes, withItems, withoutPaths, selectionState, type SelectedItem, type Selection } from "./selection";
@@ -21,7 +22,7 @@ import { RecycleBinDialog } from "./components/RecycleBinDialog";
 import { useRecycleBin } from "./useRecycleBin";
 import { useDebounced } from "./useDebounced";
 
-type Tab = "projects" | "files" | "map" | "history" | "apps";
+type Tab = "projects" | "files" | "map" | "history" | "apps" | "dev";
 
 const FILE_LIMIT = 500;
 
@@ -49,6 +50,8 @@ function App() {
   const requestId = useRef(0);
   // The map keeps its drill-down while another tab is shown, so it mounts on first visit and then stays.
   const [mapVisited, setMapVisited] = useState(false);
+  // Dev tools measure folders outside the scan, so the tab is kept once opened instead of re-measuring per visit.
+  const [devVisited, setDevVisited] = useState(false);
 
   // Everything picked for cleanup, kept here so the selection survives tab switches.
   const [selection, setSelection] = useState<Selection>(new Map());
@@ -154,7 +157,7 @@ function App() {
 
   // Refetch the visible tab whenever the query, sort or scan changes; stale replies are dropped.
   useEffect(() => {
-    if (!summary || tab === "map" || tab === "history" || tab === "apps") return;
+    if (!summary || tab === "map" || tab === "history" || tab === "apps" || tab === "dev") return;
     const id = ++requestId.current;
     const work =
       tab === "projects"
@@ -263,6 +266,17 @@ function App() {
               <button role="tab" aria-selected={tab === "apps"} className="tab" onClick={() => setTab("apps")}>
                 Apps
               </button>
+              <button
+                role="tab"
+                aria-selected={tab === "dev"}
+                className="tab"
+                onClick={() => {
+                  setTab("dev");
+                  setDevVisited(true);
+                }}
+              >
+                Dev tools
+              </button>
             </div>
           </div>
           {(tab === "projects" || tab === "files") && <SearchBar value={query} onChange={setQuery} error={searchError} />}
@@ -277,7 +291,13 @@ function App() {
                 />
               </div>
             )}
-            {tab === "map" ? null : tab === "apps" ? (
+            {devVisited && (
+              <div className="map-host" hidden={tab !== "dev"}>
+                {/* Remounted per scan and cleanup, since sizes come from the scan where it covers them. */}
+                <DevToolsTab key={`${summary.scannedAt}|${dataVersion}`} />
+              </div>
+            )}
+            {tab === "map" || tab === "dev" ? null : tab === "apps" ? (
               // Remounted per scan and cleanup, since app sizes come from the scan.
               <AppsTab key={`${summary.scannedAt}|${dataVersion}`} />
             ) : tab === "history" ? (
