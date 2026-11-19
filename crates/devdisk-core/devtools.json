@@ -1,0 +1,71 @@
+{
+  "tools": [
+    {
+      "id": "git",
+      "name": "Git",
+      "apps": ["Git"]
+    },
+    {
+      "id": "docker",
+      "name": "Docker Desktop",
+      "apps": ["Docker Desktop"],
+      "data": [
+        { "label": "Docker disks (images, containers, volumes)", "path": "%LOCALAPPDATA%\\Docker\\wsl" }
+      ]
+    },
+    {
+      "id": "wsl",
+      "name": "WSL",
+      "apps": ["Windows Subsystem for Linux"],
+      "wslDistros": true
+    },
+    {
+      "id": "vscode",
+      "name": "Visual Studio Code",
+      "apps": ["Microsoft Visual Studio Code"],
+      "data": [
+        { "label": "Extensions", "path": "%USERPROFILE%\\.vscode\\extensions" }
+      ]
+    },
+    {
+      "id": "visual-studio",
+      "name": "Visual Studio",
+      "apps": [
+        "Visual Studio Community",
+        "Visual Studio Professional",
+        "Visual Studio Enterprise",
+        "Visual Studio Build Tools"
+      ]
+    },
+    {
+      "id": "jetbrains",
+      "name": "JetBrains IDEs",
+      "apps": [
+        "IntelliJ IDEA",
+        "PyCharm",
+        "WebStorm",
+        "PhpStorm",
+        "Rider",
+        "CLion",
+        "GoLand",
+        "RustRover",
+        "DataGrip",
+        "JetBrains Toolbox"
+      ],
+      "data": [
+        { "label": "IDE caches and logs", "path": "%LOCALAPPDATA%\\JetBrains" }
+      ]
+    },
+    {
+      "id": "android",
+      "name": "Android",
+      "apps": ["Android Studio"],
+      "data": [
+        { "label": "Android SDK", "path": "%ANDROID_HOME%" },
+        { "label": "Android SDK", "path": "%ANDROID_SDK_ROOT%" },
+        { "label": "Android SDK", "path": "%LOCALAPPDATA%\\Android\\Sdk" },
+        { "label": "Emulators (AVDs)", "path": "%USERPROFILE%\\.android\\avd" }
+      ]
+    }
+  ]
+}
