@@ -1,6 +1,6 @@
 import type { Project } from "./api/types";
 
-export type SelectionSource = "projects" | "files" | "map";
+export type SelectionSource = "projects" | "files" | "map" | "duplicates";
 
 export interface SelectedItem {
   path: string;

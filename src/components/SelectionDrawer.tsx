@@ -11,7 +11,12 @@ interface Props {
   onClose: () => void;
 }
 
-const SOURCE_LABEL: Record<SelectionSource, string> = { projects: "Projects", files: "Files", map: "Map" };
+const SOURCE_LABEL: Record<SelectionSource, string> = {
+  projects: "Projects",
+  files: "Files",
+  map: "Map",
+  duplicates: "Duplicates",
+};
 
 interface Group {
   label: string | null;

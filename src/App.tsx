@@ -13,6 +13,7 @@ import { Treemap } from "./components/Treemap";
 import { HistoryTab } from "./components/HistoryTab";
 import { AppsTab } from "./components/AppsTab";
 import { DevToolsTab } from "./components/DevToolsTab";
+import { DuplicatesTab } from "./components/DuplicatesTab";
 import { SelectionBar } from "./components/SelectionBar";
 import { SelectionDrawer } from "./components/SelectionDrawer";
 import { projectItems, totalBytes, withItems, withoutPaths, selectionState, type SelectedItem, type Selection } from "./selection";
@@ -22,7 +23,7 @@ import { RecycleBinDialog } from "./components/RecycleBinDialog";
 import { useRecycleBin } from "./useRecycleBin";
 import { useDebounced } from "./useDebounced";
 
-type Tab = "projects" | "files" | "map" | "history" | "apps" | "dev";
+type Tab = "projects" | "files" | "dups" | "map" | "history" | "apps" | "dev";
 
 const FILE_LIMIT = 500;
 
@@ -52,6 +53,8 @@ function App() {
   const [mapVisited, setMapVisited] = useState(false);
   // Dev tools measure folders outside the scan, so the tab is kept once opened instead of re-measuring per visit.
   const [devVisited, setDevVisited] = useState(false);
+  // A running duplicate search reports through events, so the tab stays mounted once opened.
+  const [dupsVisited, setDupsVisited] = useState(false);
 
   // Everything picked for cleanup, kept here so the selection survives tab switches.
   const [selection, setSelection] = useState<Selection>(new Map());
@@ -157,7 +160,7 @@ function App() {
 
   // Refetch the visible tab whenever the query, sort or scan changes; stale replies are dropped.
   useEffect(() => {
-    if (!summary || tab === "map" || tab === "history" || tab === "apps" || tab === "dev") return;
+    if (!summary || tab === "map" || tab === "history" || tab === "apps" || tab === "dev" || tab === "dups") return;
     const id = ++requestId.current;
     const work =
       tab === "projects"
@@ -193,6 +196,7 @@ function App() {
     setSearchError(null);
     setLoaded(false);
     setMapVisited(false);
+    setDupsVisited(false);
     setSelection(new Map());
     setDrawerOpen(false);
     setProgress(null);
@@ -251,6 +255,17 @@ function App() {
               </button>
               <button
                 role="tab"
+                aria-selected={tab === "dups"}
+                className="tab"
+                onClick={() => {
+                  setTab("dups");
+                  setDupsVisited(true);
+                }}
+              >
+                Duplicates
+              </button>
+              <button
+                role="tab"
                 aria-selected={tab === "map"}
                 className="tab"
                 onClick={() => {
@@ -279,7 +294,9 @@ function App() {
               </button>
             </div>
           </div>
-          {(tab === "projects" || tab === "files") && <SearchBar value={query} onChange={setQuery} error={searchError} />}
+          {(tab === "projects" || tab === "files" || tab === "dups") && (
+            <SearchBar value={query} onChange={setQuery} error={searchError} />
+          )}
           <main className="content">
             {mapVisited && (
               <div className="map-host" hidden={tab !== "map"}>
@@ -297,7 +314,21 @@ function App() {
                 <DevToolsTab key={`${summary.scannedAt}|${dataVersion}`} />
               </div>
             )}
-            {tab === "map" || tab === "dev" ? null : tab === "apps" ? (
+            {dupsVisited && (
+              <div className="map-host" hidden={tab !== "dups"}>
+                {/* Keyed by scan: a search belongs to one scan, while a cleanup keeps it and only refetches. */}
+                <DuplicatesTab
+                  key={summary.scannedAt}
+                  query={debounced}
+                  root={summary.root}
+                  dataVersion={dataVersion}
+                  selection={selection}
+                  onSetMany={setMany}
+                  onSearchError={setSearchError}
+                />
+              </div>
+            )}
+            {tab === "map" || tab === "dev" || tab === "dups" ? null : tab === "apps" ? (
               // Remounted per scan and cleanup, since app sizes come from the scan.
               <AppsTab key={`${summary.scannedAt}|${dataVersion}`} />
             ) : tab === "history" ? (

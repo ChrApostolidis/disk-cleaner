@@ -8,6 +8,9 @@ import type {
   DevDiskApi,
   DevInstall,
   DevItem,
+  DupProgress,
+  DuplicateGroup,
+  Duplicates,
   FileEntry,
   FileSort,
   HistoryEntry,
@@ -158,6 +161,27 @@ function buildFiles(root: string, now: number): FileEntry[] {
     });
   }
   return out;
+}
+
+/** Copies of some bigger files in backup and download folders, so the duplicate finder has something to find. */
+function withCopies(list: FileEntry[], root: string): FileEntry[] {
+  const r = rng(7);
+  const places = [`${root}\\archive\\old-backup`, `${root}\\personal\\downloads`, `${root}\\work\\media\\copy`];
+  const copies: FileEntry[] = [];
+  // Every path must stay unique, as it is on a real disk.
+  const taken = new Set(list.map((f) => normPath(f.path)));
+  for (const f of list) {
+    if (f.size < MB || r() > 0.12) continue;
+    const n = r() < 0.25 ? 2 : 1;
+    const first = Math.floor(r() * places.length);
+    for (let i = 0; i < n; i++) {
+      const path = `${places[(first + i) % places.length]}\\${f.name}`;
+      if (taken.has(normPath(path))) continue;
+      taken.add(normPath(path));
+      copies.push({ ...f, path, modified: f.modified === null ? null : f.modified + Math.floor(r() * 90) * DAY });
+    }
+  }
+  return [...list, ...copies];
 }
 
 // ---- search syntax ----
@@ -351,6 +375,34 @@ function applyRemoval(removed: CleanupPreviewItem[]): void {
   if (volume) volume = { ...volume, free: volume.free + freed };
 }
 
+// ---- duplicates ----
+
+const DUP_MS = 2500;
+const dupProgressL: Listeners<DupProgress> = new Set();
+const dupDoneL: Listeners<null> = new Set();
+const dupErrorL: Listeners<ScanError> = new Set();
+let dupTimer: ReturnType<typeof setInterval> | null = null;
+/** Scan the last search ran on, and when it finished. */
+let dupFor: { scannedAt: number; foundAt: number } | null = null;
+
+/** Copies share name and size in the mock data, which stands in for "same content". */
+function dupGroups(): FileEntry[][] {
+  const by = new Map<string, FileEntry[]>();
+  for (const f of files) {
+    if (f.size < MB) continue;
+    const k = `${f.name.toLowerCase()}|${f.size}`;
+    by.set(k, [...(by.get(k) ?? []), f]);
+  }
+  return [...by.values()].filter((g) => g.length > 1);
+}
+
+function stopDuplicates(message: string): void {
+  if (dupTimer === null) return;
+  clearInterval(dupTimer);
+  dupTimer = null;
+  dupErrorL.forEach((cb) => cb({ message, cancelled: true }));
+}
+
 // ---- Recycle Bin ----
 
 const BIN_NAMES = ["node_modules", "target", ".venv", "dist", "build", ".next", "vendor", "cache", "report.pdf", "backup.zip", "render.mp4", "notes.txt", "screenshot.png", "setup.exe", "dump.sql", "old-photos", "Downloads", "draft.docx"];
@@ -404,7 +456,7 @@ function boot(): void {
   bootTimer = setTimeout(() => {
     bootTimer = null;
     const builtProjects = buildProjects(root, scannedAt);
-    const builtFiles = buildFiles(root, scannedAt);
+    const builtFiles = withCopies(buildFiles(root, scannedAt), root);
     projects = builtProjects;
     files = builtFiles;
     tree = buildTree(root, builtProjects, new Map(SEEDS.map((x) => [x.name, x.sourceMb])));
@@ -561,6 +613,17 @@ export const mockApi: DevDiskApi = {
     await delay(150);
     if (!summary) throw "No scan has finished yet.";
     const items = [...new Set(paths)].map(classify);
+    if (dupFor && summary && dupFor.scannedAt === summary.scannedAt) {
+      const picked = new Set(items.map((i) => normPath(i.path)));
+      for (const g of dupGroups()) {
+        if (!g.every((f) => picked.has(normPath(f.path)))) continue;
+        for (const it of items) {
+          if (!g.some((f) => normPath(f.path) === normPath(it.path))) continue;
+          it.reasons.push("every copy of this duplicate is selected: no copy would be kept");
+          if (it.verdict === "ok") it.verdict = "warn";
+        }
+      }
+    }
     return { items, totalFreed: items.filter((i) => i.verdict !== "refuse").reduce((a, i) => a + i.allocated, 0) };
   },
   async startCleanup(paths) {
@@ -645,8 +708,71 @@ export const mockApi: DevDiskApi = {
   onCleanupDone: (cb) => subscribe(cleanupDoneL, cb),
   onReinstallOutput: (cb) => subscribe(reinstallOutL, cb),
   onReinstallDone: (cb) => subscribe(reinstallDoneL, cb),
+  async startDuplicates() {
+    if (!summary) throw "no scan yet";
+    if (timer !== null) throw "a scan is running, wait for it to finish";
+    if (cleaning) throw "a cleanup is running, wait for it to finish";
+    if (dupTimer !== null) throw "a duplicate search is already running";
+    const scannedAt = summary.scannedAt;
+    const candidates = files.filter((f) => f.size >= MB);
+    const groups = dupGroups();
+    const partialTotal = candidates.length;
+    const fullFiles = groups.flat();
+    const fullBytes = fullFiles.reduce((a, f) => a + f.size, 0);
+    const start = Date.now();
+    dupTimer = setInterval(() => {
+      const t = Math.min(1, (Date.now() - start) / DUP_MS);
+      if (t < 1) {
+        const p: DupProgress =
+          t < 0.4
+            ? { phase: "partial", filesDone: Math.round((partialTotal * t) / 0.4), filesTotal: partialTotal, bytesDone: Math.round((partialTotal * MB * t) / 0.4), bytesTotal: partialTotal * MB }
+            : { phase: "full", filesDone: Math.round((fullFiles.length * (t - 0.4)) / 0.6), filesTotal: fullFiles.length, bytesDone: Math.round((fullBytes * (t - 0.4)) / 0.6), bytesTotal: fullBytes };
+        dupProgressL.forEach((cb) => cb(p));
+        return;
+      }
+      if (dupTimer !== null) clearInterval(dupTimer);
+      dupTimer = null;
+      dupFor = { scannedAt, foundAt: Date.now() };
+      dupDoneL.forEach((cb) => cb(null));
+    }, 100);
+  },
+  async cancelDuplicates() {
+    stopDuplicates("duplicate search cancelled");
+  },
+  async getDuplicates(query, limit): Promise<Duplicates | null> {
+    await delay(80);
+    if (!dupFor || !summary || dupFor.scannedAt !== summary.scannedAt) return null;
+    const f = parse(query);
+    const now = Date.now();
+    const all: DuplicateGroup[] = dupGroups()
+      .filter((g) => g.some((x) => matches(f, x.name, x.allocated, x.modified, now)))
+      .map((g, i) => ({
+        id: i,
+        size: g[0].size,
+        hash: (g[0].size * 2654435761).toString(16).padStart(64, "0").slice(-64),
+        reclaimable: g[0].allocated * (g.length - 1),
+        files: [...g].sort((a, b) => (a.modified ?? Infinity) - (b.modified ?? Infinity) || a.path.localeCompare(b.path)),
+      }))
+      .sort((a, b) => b.reclaimable - a.reclaimable);
+    return {
+      groups: all.slice(0, limit),
+      totalGroups: all.length,
+      totalReclaimable: all.reduce((a, g) => a + g.reclaimable, 0),
+      issues: [
+        { path: `${summary.root}\\personal\\downloads\\locked.vhdx`, message: "The process cannot access the file because it is being used by another process. (os error 32)" },
+      ],
+      issueCount: 1,
+      hardLinked: 4,
+      elapsedMs: DUP_MS,
+      foundAt: dupFor.foundAt,
+    };
+  },
+  onDuplicatesProgress: (cb) => subscribe(dupProgressL, cb),
+  onDuplicatesDone: (cb) => subscribe(dupDoneL, () => cb()),
+  onDuplicatesError: (cb) => subscribe(dupErrorL, cb),
   async startScan(root) {
     boot();
+    stopDuplicates("duplicate search cancelled");
     if (bootTimer !== null) {
       clearTimeout(bootTimer);
       bootTimer = null;
@@ -656,7 +782,7 @@ export const mockApi: DevDiskApi = {
     const start = Date.now();
     const base = root.replace(/[\\/]+$/, "");
     const builtProjects = buildProjects(base, start);
-    const builtFiles = buildFiles(base, start);
+    const builtFiles = withCopies(buildFiles(base, start), base);
     const totalAlloc =
       builtFiles.reduce((a, f) => a + f.allocated, 0) + builtProjects.reduce((a, p) => a + p.totalAllocated, 0);
     const totalFiles = 184_320;

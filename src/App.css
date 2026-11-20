@@ -233,6 +233,32 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .dev-row > :last-child { grid-column: 1 / -1; text-align: left; }
 }
 
+/* Duplicates tab */
+.dups { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.dups-actions { display: flex; gap: 8px; margin-left: auto; }
+.dups-notes { margin: 0; }
+.dups-notes summary { cursor: pointer; }
+.dups-notes p { margin: 6px 0; }
+.dups-list { flex: 1; min-height: 0; overflow-y: auto; }
+.dups-inner { position: relative; }
+.dups-item { position: absolute; top: 0; left: 0; right: 0; padding-bottom: 12px; }
+.dup-head { min-height: 44px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; }
+.dup-row {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) 108px 130px; gap: 12px; align-items: center;
+  min-height: 40px; box-sizing: border-box; padding: 4px 14px; border-bottom: 1px solid var(--border);
+}
+.dup-row:last-child { border-bottom: none; }
+.dup-row input[type="checkbox"] { width: 16px; height: 16px; margin: 0; }
+.dup-file { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dup-file .tag { flex-shrink: 0; }
+.dup-progress { display: flex; flex-direction: column; gap: 8px; }
+.dup-progress-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.reclaim-text { color: var(--reclaim); font-weight: 600; }
+@media (max-width: 600px) {
+  .dup-row { grid-template-columns: 22px minmax(0, 1fr) 92px; }
+  .dup-row > :last-child { grid-column: 2 / -1; text-align: left; }
+}
+
 /* Map tab */
 .map-host { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .map-host[hidden] { display: none; }

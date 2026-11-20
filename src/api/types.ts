@@ -308,6 +308,58 @@ export interface DevTools {
   tools: DevItem[];
 }
 
+/** `partial`: hashing the first 1 MB of files that share a size; `full`: hashing whole files whose first MB matched. */
+export type DupPhase = "partial" | "full";
+
+/** Payload of `duplicates-progress`. Sent at most every ~100 ms, plus once at the end of each phase. */
+export interface DupProgress {
+  phase: DupPhase;
+  filesDone: number;
+  filesTotal: number;
+  /** Bytes read so far in this phase. */
+  bytesDone: number;
+  bytesTotal: number;
+}
+
+/** Files with identical content (same size, same blake3 hash). */
+export interface DuplicateGroup {
+  /** Stable until the next search. */
+  id: number;
+  /** Logical size of each copy, bytes. */
+  size: number;
+  /** blake3, lowercase hex. */
+  hash: string;
+  /** Size on disk freed by keeping one copy, bytes. */
+  reclaimable: number;
+  /** Two or more, oldest modified first. */
+  files: FileEntry[];
+}
+
+export interface DupIssue {
+  path: string;
+  message: string;
+}
+
+/**
+ * Result of a duplicate search on the current scan. Files under 1 MB, cloud-only and hard-linked files,
+ * and files inside .git, node_modules, other regenerable folders and system folders are never included.
+ */
+export interface Duplicates {
+  /** Biggest reclaimable first, at most the requested limit. */
+  groups: DuplicateGroup[];
+  /** Groups matching the query, including those past the limit. */
+  totalGroups: number;
+  totalReclaimable: number;
+  /** Files that could not be read or changed since the scan (first 200). */
+  issues: DupIssue[];
+  issueCount: number;
+  /** Files left out because they are hard-linked. */
+  hardLinked: number;
+  elapsedMs: number;
+  /** When the search finished. */
+  foundAt: UnixMs;
+}
+
 /** Tauri command names and their arguments/results. All commands reject with a string message. */
 export interface DevDiskApi {
   /** `start_scan`: starts a background scan; rejects if one is running or the path is not a folder. */
@@ -365,6 +417,22 @@ export interface DevDiskApi {
    * Folders the scan does not cover are measured on the spot, so this can take several seconds.
    */
   listDevTools(): Promise<DevTools>;
+  /**
+   * `start_duplicates`: hashes files of the current scan in the background. Progress and the end come as
+   * `duplicates-progress` / `duplicates-done` / `duplicates-error`. Rejects before a scan, while a scan or
+   * cleanup runs, or when a search is already running. Starting a scan cancels a running search.
+   */
+  startDuplicates(): Promise<void>;
+  /** `cancel_duplicates`: no-op when nothing is running. */
+  cancelDuplicates(): Promise<void>;
+  /**
+   * `get_duplicates`: groups with a file matching `query` (whole groups are returned) and two copies still
+   * present. null when no search ran on the current scan; a cleanup keeps the result, a new scan drops it.
+   */
+  getDuplicates(query: SearchQuery, limit: number): Promise<Duplicates | null>;
+  onDuplicatesProgress(cb: (p: DupProgress) => void): Promise<() => void>;
+  onDuplicatesDone(cb: () => void): Promise<() => void>;
+  onDuplicatesError(cb: (e: ScanError) => void): Promise<() => void>;
   /** Event listeners. Each returns an unsubscribe function. */
   onProgress(cb: (p: ScanProgress) => void): Promise<() => void>;
   onDone(cb: (s: ScanSummary) => void): Promise<() => void>;
@@ -380,6 +448,9 @@ export const EVENTS = {
   cleanupDone: "cleanup-done",
   reinstallOutput: "reinstall-output",
   reinstallDone: "reinstall-done",
+  duplicatesProgress: "duplicates-progress",
+  duplicatesDone: "duplicates-done",
+  duplicatesError: "duplicates-error",
 } as const;
 
 /** Tauri command names. Arguments are passed as camelCase objects, e.g. invoke("list_files", { query, sort, descending, limit }). */
@@ -401,4 +472,7 @@ export const COMMANDS = {
   emptyRecycleBin: "empty_recycle_bin",
   listApps: "list_apps",
   listDevTools: "list_dev_tools",
+  startDuplicates: "start_duplicates",
+  cancelDuplicates: "cancel_duplicates",
+  getDuplicates: "get_duplicates",
 } as const;
