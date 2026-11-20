@@ -6,6 +6,7 @@ pub mod bin;
 pub mod cleanup;
 pub mod detect;
 pub mod devtools;
+pub mod duplicates;
 pub mod index;
 pub mod projects;
 #[cfg(windows)]
