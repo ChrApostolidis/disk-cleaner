@@ -1,13 +1,14 @@
 //! Thin Tauri wrappers around `data`. No logic lives here beyond state and threading.
 
 use crate::data::{
-    CleanupDoneDto, CleanupProgressDto, CleanupResultItemDto, FileEntryDto, ProjectDto,
-    ReinstallDoneDto, ReinstallOutputDto, RestoreResultDto, ScanData, ScanErrorDto, ScanSummaryDto,
-    batch_id, bin_summary, check_can_clean, check_can_empty_bin, check_can_scan, dev_folder_size,
-    empty_bin, error_dto, find_project_by_path, folder_size_in_scan, freed_bytes, list_bin,
-    load_saved, progress_dto, query_files, query_projects, reinstall_offers, restore_dtos,
-    result_items, run_cleanup, run_scan, save_scan, should_apply_snapshot, snapshot_path,
-    treemap_at,
+    CleanupDoneDto, CleanupProgressDto, CleanupResultItemDto, DupData, DuplicatesDto, FileEntryDto,
+    ProjectDto, ReinstallDoneDto, ReinstallOutputDto, RestoreResultDto, ScanData, ScanErrorDto,
+    ScanSummaryDto, batch_id, bin_summary, check_can_clean, check_can_empty_bin,
+    check_can_find_duplicates, check_can_scan, dev_folder_size, dup_error_dto, dup_progress_dto,
+    dups_match_scan, empty_bin, error_dto, find_project_by_path, folder_size_in_scan, freed_bytes,
+    list_bin, load_saved, mark_unkept_copies, progress_dto, query_duplicates, query_files,
+    query_projects, reinstall_offers, restore_dtos, result_items, run_cleanup, run_duplicates,
+    run_scan, save_scan, should_apply_snapshot, snapshot_path, treemap_at,
 };
 use devdisk_core::apps::{AppEntry, SystemApps, list_apps as list_installed_apps};
 use devdisk_core::bin::{BinItem, BinSummary, SystemRecycleBin};
@@ -16,6 +17,7 @@ use devdisk_core::cleanup::{
     TrashMover, preview, restore,
 };
 use devdisk_core::devtools::{DevEnv, DevItem, ToolRules, detect};
+use devdisk_core::duplicates::{DupProgress, DupProgressSink};
 use devdisk_core::rules::Rules;
 use devdisk_core::scanner::{Progress, ProgressSink};
 use devdisk_core::treemap::TreemapNode;
@@ -36,6 +38,9 @@ pub const EVENT_CLEANUP_PROGRESS: &str = "cleanup-progress";
 pub const EVENT_CLEANUP_DONE: &str = "cleanup-done";
 pub const EVENT_REINSTALL_OUTPUT: &str = "reinstall-output";
 pub const EVENT_REINSTALL_DONE: &str = "reinstall-done";
+pub const EVENT_DUPLICATES_PROGRESS: &str = "duplicates-progress";
+pub const EVENT_DUPLICATES_DONE: &str = "duplicates-done";
+pub const EVENT_DUPLICATES_ERROR: &str = "duplicates-error";
 
 /// Mutexes are only held for a pointer swap, never across a scan.
 #[derive(Default)]
@@ -50,6 +55,10 @@ pub struct AppState {
     reinstalling: Mutex<HashSet<String>>,
     /// Opened on first use; the connection is not `Sync`, so it lives behind the mutex.
     log: Mutex<Option<CleanupLog>>,
+    /// Last finished duplicate search; only shown while it matches the current scan.
+    dups: Mutex<Option<Arc<DupData>>>,
+    /// Cancel flag of the running duplicate search. Locked after `running` and `cleaning`.
+    dup_running: Mutex<Option<Arc<AtomicBool>>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -60,6 +69,10 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
 impl AppState {
     fn current(&self) -> Option<Arc<ScanData>> {
         lock(&self.data).clone()
+    }
+
+    fn duplicates(&self) -> Option<Arc<DupData>> {
+        lock(&self.dups).clone()
     }
 }
 
@@ -173,6 +186,10 @@ pub async fn start_scan(
             return Err("a scan is already running".into());
         }
         *running = Some(cancel.clone());
+        // Its result would belong to the scan being replaced.
+        if let Some(flag) = lock(&state.dup_running).as_ref() {
+            flag.store(true, Ordering::Relaxed);
+        }
     }
     let thread_app = app.clone();
     let spawned = std::thread::Builder::new()
@@ -285,7 +302,9 @@ pub async fn preview_cleanup(
         protected: &protected,
     };
     let paths: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
-    preview(&ctx, &paths, &SystemEnvironment).map_err(|e| e.to_string())
+    let mut result = preview(&ctx, &paths, &SystemEnvironment).map_err(|e| e.to_string())?;
+    mark_unkept_copies(&mut result, &data, state.duplicates().as_deref());
+    Ok(result)
 }
 
 /// Clears the cleanup flag on every exit path of the cleanup thread, including panics.
@@ -500,6 +519,99 @@ pub async fn list_dev_tools(state: State<'_, AppState>) -> Result<DevToolsDto, S
     })
     .await
     .map_err(|e| format!("listing dev tools failed: {e}"))?
+}
+
+struct DupSink(AppHandle);
+
+impl DupProgressSink for DupSink {
+    fn report(&self, p: &DupProgress) {
+        let _ = self.0.emit(EVENT_DUPLICATES_PROGRESS, dup_progress_dto(p));
+    }
+}
+
+/// Clears the duplicate-search flag on every exit path, including panics.
+struct DupRunningGuard(AppHandle);
+
+impl Drop for DupRunningGuard {
+    fn drop(&mut self) {
+        *lock(&self.0.state::<AppState>().dup_running) = None;
+    }
+}
+
+fn duplicates_thread(app: AppHandle, data: Arc<ScanData>, cancel: Arc<AtomicBool>) {
+    let guard = DupRunningGuard(app.clone());
+    let sink = DupSink(app.clone());
+    let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        run_duplicates(&data, cancel, &sink)
+    }));
+    // Release the flag before telling the UI, so a search started right after is accepted.
+    drop(guard);
+    match outcome {
+        Ok(Ok(dups)) => {
+            *lock(&app.state::<AppState>().dups) = Some(Arc::new(dups));
+            let _ = app.emit(EVENT_DUPLICATES_DONE, ());
+        }
+        Ok(Err(e)) => {
+            let _ = app.emit(EVENT_DUPLICATES_ERROR, dup_error_dto(&e));
+        }
+        Err(_) => {
+            let _ = app.emit(
+                EVENT_DUPLICATES_ERROR,
+                ScanErrorDto {
+                    message: "the duplicate search crashed unexpectedly".into(),
+                    cancelled: false,
+                },
+            );
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn start_duplicates(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let data = state.current().ok_or("no scan yet")?;
+    let cancel = Arc::new(AtomicBool::new(false));
+    {
+        let running = lock(&state.running);
+        let cleaning = lock(&state.cleaning);
+        check_can_find_duplicates(running.is_some(), *cleaning)?;
+        let mut dup_running = lock(&state.dup_running);
+        if dup_running.is_some() {
+            return Err("a duplicate search is already running".into());
+        }
+        *dup_running = Some(cancel.clone());
+    }
+    let thread_app = app.clone();
+    let spawned = std::thread::Builder::new()
+        .name("devdisk-duplicates".into())
+        .spawn(move || duplicates_thread(thread_app, data, cancel));
+    if let Err(e) = spawned {
+        *lock(&state.dup_running) = None;
+        return Err(format!("could not start the duplicate search: {e}"));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn cancel_duplicates(state: State<'_, AppState>) -> Result<(), String> {
+    if let Some(flag) = lock(&state.dup_running).as_ref() {
+        flag.store(true, Ordering::Relaxed);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_duplicates(
+    state: State<'_, AppState>,
+    query: String,
+    limit: usize,
+) -> Result<Option<DuplicatesDto>, String> {
+    let (Some(data), Some(dups)) = (state.current(), state.duplicates()) else {
+        return Ok(None);
+    };
+    if !dups_match_scan(&dups, &data) {
+        return Ok(None);
+    }
+    query_duplicates(&data, &dups, &query, limit, SystemTime::now()).map(Some)
 }
 
 /// Removes the project's "reinstall running" mark on every exit path.

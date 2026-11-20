@@ -3,10 +3,14 @@
 
 use devdisk_core::bin::{BinItem, BinSummary, RecycleBin, list_items};
 use devdisk_core::cleanup::{
-    CleanupContext, CleanupError, CleanupLog, Environment, HistoryEntry, Mover, RecycleOutcome,
-    RestoreOutcome, recycle,
+    CleanupContext, CleanupError, CleanupLog, Environment, HistoryEntry, Mover, Preview,
+    RecycleOutcome, RestoreOutcome, Verdict, recycle,
 };
 use devdisk_core::devtools::DevSizeSource;
+use devdisk_core::duplicates::{
+    DupError, DupOptions, DupPhase, DupProgress, DupProgressSink, DupResult, default_skips,
+    find_duplicates, reclaimable, without_a_kept_copy,
+};
 use devdisk_core::index::{NodeId, NodeKind, Tree};
 use devdisk_core::projects::{Project, find_projects};
 use devdisk_core::rules::Rules;
@@ -605,9 +609,221 @@ pub fn check_can_clean(scan_running: bool, cleanup_running: bool) -> Result<(), 
     Ok(())
 }
 
+/// Upper bound for duplicate groups sent to the UI; totals still count every group.
+pub const MAX_DUP_GROUPS: usize = 1000;
+
+/// Unreadable files listed by name in the UI; the count covers all of them.
+const MAX_DUP_ISSUES: usize = 200;
+
+/// A finished duplicate search and the scan it ran on. Node ids stay valid across cleanups
+/// (removed nodes are only detached), so it is reused until the next scan.
+pub struct DupData {
+    pub root: String,
+    pub scanned_at: i64,
+    pub result: DupResult,
+    pub found_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DupProgressDto {
+    pub phase: DupPhase,
+    pub files_done: u64,
+    pub files_total: u64,
+    pub bytes_done: u64,
+    pub bytes_total: u64,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicateGroupDto {
+    /// Index of the group in the search result; stable until the next search.
+    pub id: u64,
+    pub size: u64,
+    pub hash: String,
+    /// Size on disk freed by keeping one copy.
+    pub reclaimable: u64,
+    /// Oldest first.
+    pub files: Vec<FileEntryDto>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DupIssueDto {
+    pub path: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicatesDto {
+    /// Biggest reclaimable first, at most the requested limit.
+    pub groups: Vec<DuplicateGroupDto>,
+    /// Groups matching the query, including those past the limit.
+    pub total_groups: u64,
+    pub total_reclaimable: u64,
+    pub issues: Vec<DupIssueDto>,
+    pub issue_count: u64,
+    pub hard_linked: u64,
+    pub elapsed_ms: u64,
+    pub found_at: i64,
+}
+
+pub fn dup_progress_dto(p: &DupProgress) -> DupProgressDto {
+    DupProgressDto {
+        phase: p.phase,
+        files_done: p.files_done,
+        files_total: p.files_total,
+        bytes_done: p.bytes_done,
+        bytes_total: p.bytes_total,
+    }
+}
+
+pub fn dup_error_dto(e: &DupError) -> ScanErrorDto {
+    ScanErrorDto {
+        message: e.to_string(),
+        cancelled: matches!(e, DupError::Cancelled),
+    }
+}
+
+/// Hashes files of the scan, leaving out dependency, build, `.git` and system folders.
+pub fn run_duplicates(
+    data: &ScanData,
+    cancel: Arc<AtomicBool>,
+    sink: &dyn DupProgressSink,
+) -> Result<DupData, DupError> {
+    let skip = default_skips(&data.tree, &data.projects, &Rules::builtin());
+    let options = DupOptions {
+        cancel: Some(cancel),
+        ..DupOptions::default()
+    };
+    let result = find_duplicates(&data.tree, &skip, &options, sink)?;
+    Ok(DupData {
+        root: data.summary.root.clone(),
+        scanned_at: data.summary.scanned_at,
+        result,
+        found_at: now_ms(),
+    })
+}
+
+/// A cleanup keeps the scan time, a new scan does not.
+pub fn dups_match_scan(dups: &DupData, data: &ScanData) -> bool {
+    dups.scanned_at == data.summary.scanned_at && dups.root == data.summary.root
+}
+
+/// Groups that still have two live copies and a file matching `query`, biggest reclaimable
+/// first. A group is returned whole even when only one of its files matches.
+pub fn query_duplicates(
+    data: &ScanData,
+    dups: &DupData,
+    query: &str,
+    limit: usize,
+    now: SystemTime,
+) -> Result<DuplicatesDto, String> {
+    let q = Query::parse(query).map_err(|e| e.to_string())?;
+    let tree = &data.tree;
+    let mut groups: Vec<(usize, Vec<NodeId>, u64)> = dups
+        .result
+        .groups
+        .iter()
+        .enumerate()
+        .filter_map(|(i, g)| {
+            let live: Vec<NodeId> = g
+                .files
+                .iter()
+                .copied()
+                .filter(|&id| tree.is_live(id))
+                .collect();
+            if live.len() < 2 {
+                return None;
+            }
+            let hit = live.iter().any(|&id| {
+                let n = tree.node(id);
+                q.matches(&[&n.name], n.allocated, n.modified, now)
+            });
+            hit.then(|| (i, live, reclaimable(tree, g)))
+        })
+        .collect();
+    // A cleanup can shrink a group, so the stored order may no longer hold.
+    groups.sort_by(|a, b| b.2.cmp(&a.2).then(a.0.cmp(&b.0)));
+    let total_groups = groups.len() as u64;
+    let total_reclaimable = groups.iter().map(|g| g.2).sum();
+    let groups = groups
+        .into_iter()
+        .take(limit.min(MAX_DUP_GROUPS))
+        .map(|(i, live, reclaimable)| {
+            let g = &dups.result.groups[i];
+            DuplicateGroupDto {
+                id: i as u64,
+                size: g.size,
+                hash: g.hash.clone(),
+                reclaimable,
+                files: file_dtos(data, &live),
+            }
+        })
+        .collect();
+    let r = &dups.result;
+    Ok(DuplicatesDto {
+        groups,
+        total_groups,
+        total_reclaimable,
+        issues: r
+            .issues
+            .iter()
+            .take(MAX_DUP_ISSUES)
+            .map(|i| DupIssueDto {
+                path: i.path.to_string_lossy().into_owned(),
+                message: i.message.clone(),
+            })
+            .collect(),
+        issue_count: r.issues.len() as u64,
+        hard_linked: r.hard_linked,
+        elapsed_ms: r.elapsed.as_millis() as u64,
+        found_at: dups.found_at,
+    })
+}
+
+/// Adds a warning to every selected duplicate whose group would have no copy left, counting
+/// copies removed with a selected folder too. Does nothing without a search of this scan.
+pub fn mark_unkept_copies(preview: &mut Preview, data: &ScanData, dups: Option<&DupData>) {
+    let Some(dups) = dups.filter(|d| dups_match_scan(d, data)) else {
+        return;
+    };
+    let ids: Vec<Option<NodeId>> = preview
+        .items
+        .iter()
+        .map(|i| data.tree.find(&i.path))
+        .collect();
+    let selected: Vec<NodeId> = ids.iter().flatten().copied().collect();
+    let unkept: HashSet<NodeId> = without_a_kept_copy(&data.tree, &dups.result.groups, &selected)
+        .into_iter()
+        .collect();
+    for (item, id) in preview.items.iter_mut().zip(ids) {
+        if id.is_some_and(|id| unkept.contains(&id)) {
+            item.reasons
+                .push("every copy of this duplicate is selected: no copy would be kept".into());
+            if item.verdict == Verdict::Ok {
+                item.verdict = Verdict::Warn;
+            }
+        }
+    }
+}
+
+/// Hashing reads the files a scan replaces or a cleanup moves, so it never overlaps either.
+pub fn check_can_find_duplicates(scan_running: bool, cleanup_running: bool) -> Result<(), String> {
+    if scan_running {
+        return Err("a scan is running, wait for it to finish".into());
+    }
+    if cleanup_running {
+        return Err("a cleanup is running, wait for it to finish".into());
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use devdisk_core::duplicates::NoDupProgress;
     use devdisk_core::scanner::NoProgress;
     use std::collections::BTreeSet;
     use std::fs;
@@ -1521,5 +1737,197 @@ mod tests {
         assert_eq!(v["kind"], "dir");
         assert_eq!(v["size"], 10);
         assert_eq!(v["fromDevDisk"], false);
+    }
+
+    // ---- duplicates ----
+
+    /// Above the 1 MiB first block, so both hash passes run.
+    const BIG: usize = 1_500_000;
+
+    fn write_fill(path: &Path, bytes: usize, fill: u8) {
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, vec![fill; bytes]).unwrap();
+    }
+
+    /// root/{docs/{report.pdf, copy of report.pdf}, music/{song.mp3, song (1).mp3}, other.bin,
+    /// shop (Node project) with the same report inside node_modules}
+    fn dup_fixture() -> (tempfile::TempDir, ScanData, DupData) {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        write_fill(&r.join("docs/report.pdf"), BIG, 1);
+        write_fill(&r.join("docs/copy of report.pdf"), BIG, 1);
+        write_fill(&r.join("music/song.mp3"), BIG + 10, 2);
+        write_fill(&r.join("music/song (1).mp3"), BIG + 10, 2);
+        write_fill(&r.join("other.bin"), BIG, 3);
+        write_text(&r.join("shop/package.json"), r#"{"name":"shop"}"#);
+        write_text(&r.join("shop/package-lock.json"), "{}");
+        write_fill(&r.join("shop/node_modules/pkg/report.pdf"), BIG, 1);
+        let data = run_scan(r, Arc::new(AtomicBool::new(false)), &NoProgress).unwrap();
+        let dups = run_duplicates(&data, Arc::new(AtomicBool::new(false)), &NoDupProgress).unwrap();
+        (dir, data, dups)
+    }
+
+    fn group_names(g: &DuplicateGroupDto) -> Vec<String> {
+        let mut v: Vec<String> = g.files.iter().map(|f| f.name.clone()).collect();
+        v.sort();
+        v
+    }
+
+    #[test]
+    fn duplicates_of_a_scan_leave_out_dependency_folders() {
+        let (_dir, data, dups) = dup_fixture();
+        assert!(dups_match_scan(&dups, &data));
+        let dto = query_duplicates(&data, &dups, "", 100, SystemTime::now()).unwrap();
+        assert_eq!(dto.total_groups, 2);
+        assert_eq!(dto.groups.len(), 2);
+        // The bigger songs free more, so they come first.
+        assert_eq!(group_names(&dto.groups[0]), ["song (1).mp3", "song.mp3"]);
+        assert_eq!(
+            group_names(&dto.groups[1]),
+            ["copy of report.pdf", "report.pdf"]
+        );
+        let g = &dto.groups[1];
+        assert_eq!(g.size, BIG as u64);
+        assert_eq!(g.reclaimable, g.files[0].allocated);
+        assert_eq!(
+            dto.total_reclaimable,
+            dto.groups.iter().map(|g| g.reclaimable).sum::<u64>()
+        );
+        assert_eq!(dto.issue_count, 0);
+    }
+
+    #[test]
+    fn duplicate_query_keeps_groups_with_a_matching_file_and_caps_the_list() {
+        let (_dir, data, dups) = dup_fixture();
+        let now = SystemTime::now();
+        let pdf = query_duplicates(&data, &dups, "copy", 100, now).unwrap();
+        assert_eq!(pdf.total_groups, 1);
+        // The whole group is returned, not only the file that matched.
+        assert_eq!(pdf.groups[0].files.len(), 2);
+        assert!(
+            query_duplicates(&data, &dups, "*.zip", 100, now)
+                .unwrap()
+                .groups
+                .is_empty()
+        );
+        let one = query_duplicates(&data, &dups, "", 1, now).unwrap();
+        assert_eq!(one.groups.len(), 1);
+        assert_eq!(one.total_groups, 2);
+        assert!(query_duplicates(&data, &dups, ">", 100, now).is_err());
+    }
+
+    #[test]
+    fn duplicates_follow_a_cleanup_but_not_a_new_scan() {
+        let (dir, data, dups) = dup_fixture();
+        let r = dir.path();
+        let log_dir = tempfile::tempdir().unwrap();
+        let log = CleanupLog::open(&log_dir.path().join("log.sqlite")).unwrap();
+        let (_, cleaned) = run(&data, &[r.join("music/song (1).mp3")], &NOT_TRACKED, &log);
+
+        assert!(dups_match_scan(&dups, &cleaned));
+        let dto = query_duplicates(&cleaned, &dups, "", 100, SystemTime::now()).unwrap();
+        assert_eq!(dto.total_groups, 1);
+        assert_eq!(
+            group_names(&dto.groups[0]),
+            ["copy of report.pdf", "report.pdf"]
+        );
+
+        let mut rescanned = run_scan(r, Arc::new(AtomicBool::new(false)), &NoProgress).unwrap();
+        rescanned.summary.scanned_at = data.summary.scanned_at + 1;
+        assert!(!dups_match_scan(&dups, &rescanned));
+    }
+
+    #[test]
+    fn preview_warns_when_no_copy_of_a_duplicate_is_kept() {
+        let (dir, data, dups) = dup_fixture();
+        let r = dir.path();
+        let rules = Rules::builtin();
+        let ctx = CleanupContext {
+            tree: &data.tree,
+            projects: &data.projects,
+            rules: &rules,
+            protected: &[],
+        };
+        let one = [r.join("docs/report.pdf")];
+        let mut keeps = devdisk_core::cleanup::preview(&ctx, &one, &NOT_TRACKED).unwrap();
+        mark_unkept_copies(&mut keeps, &data, Some(&dups));
+        assert_eq!(keeps.items[0].verdict, Verdict::Ok);
+
+        let both = [r.join("docs/report.pdf"), r.join("docs/copy of report.pdf")];
+        let mut gone = devdisk_core::cleanup::preview(&ctx, &both, &NOT_TRACKED).unwrap();
+        mark_unkept_copies(&mut gone, &data, Some(&dups));
+        for item in &gone.items {
+            assert_eq!(item.verdict, Verdict::Warn, "{item:?}");
+            assert!(
+                item.reasons.iter().any(|r| r.contains("no copy")),
+                "{item:?}"
+            );
+        }
+
+        // Without a search, or with one from another scan, nothing is added.
+        let mut plain = devdisk_core::cleanup::preview(&ctx, &both, &NOT_TRACKED).unwrap();
+        mark_unkept_copies(&mut plain, &data, None);
+        assert!(plain.items.iter().all(|i| i.verdict == Verdict::Ok));
+    }
+
+    #[test]
+    fn duplicate_search_waits_for_scans_and_cleanups() {
+        assert!(check_can_find_duplicates(false, false).is_ok());
+        assert!(
+            check_can_find_duplicates(true, false)
+                .unwrap_err()
+                .contains("scan")
+        );
+        assert!(
+            check_can_find_duplicates(false, true)
+                .unwrap_err()
+                .contains("cleanup")
+        );
+    }
+
+    #[test]
+    fn duplicate_json_keys_match_the_typescript_contract() {
+        let (_dir, data, dups) = dup_fixture();
+        let dto = query_duplicates(&data, &dups, "", 100, SystemTime::now()).unwrap();
+        assert_eq!(
+            keys(&dto),
+            set(&[
+                "groups",
+                "totalGroups",
+                "totalReclaimable",
+                "issues",
+                "issueCount",
+                "hardLinked",
+                "elapsedMs",
+                "foundAt"
+            ])
+        );
+        assert_eq!(
+            keys(&dto.groups[0]),
+            set(&["id", "size", "hash", "reclaimable", "files"])
+        );
+        let issue = DupIssueDto {
+            path: "p".into(),
+            message: "m".into(),
+        };
+        assert_eq!(keys(&issue), set(&["path", "message"]));
+        let p = dup_progress_dto(&DupProgress {
+            phase: DupPhase::Full,
+            files_done: 1,
+            files_total: 2,
+            bytes_done: 3,
+            bytes_total: 4,
+        });
+        assert_eq!(
+            keys(&p),
+            set(&[
+                "phase",
+                "filesDone",
+                "filesTotal",
+                "bytesDone",
+                "bytesTotal"
+            ])
+        );
+        assert_eq!(serde_json::to_value(&p).unwrap()["phase"], "full");
     }
 }
