@@ -2,6 +2,7 @@ mod format;
 
 use clap::{Parser, Subcommand};
 use devdisk_core::index::Tree;
+use devdisk_core::mft::MftScanner;
 use devdisk_core::projects::{Project, find_projects};
 use devdisk_core::rules::Rules;
 use devdisk_core::scanner::{Progress, ProgressSink, ScanOptions, Scanner, WalkScanner};
@@ -26,6 +27,9 @@ enum Command {
         /// How many of the biggest folders to list
         #[arg(long, default_value_t = 15)]
         top: usize,
+        /// Read the NTFS file table directly (run from an administrator terminal)
+        #[arg(long)]
+        mft: bool,
     },
 }
 
@@ -63,7 +67,7 @@ impl StderrProgress {
 fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
-        Command::Scan { path, top } => match scan(path, top) {
+        Command::Scan { path, top, mft } => match scan(path, top, mft) {
             Ok(()) => ExitCode::SUCCESS,
             Err(msg) => {
                 eprintln!("error: {msg}");
@@ -73,13 +77,14 @@ fn main() -> ExitCode {
     }
 }
 
-fn scan(path: PathBuf, top: usize) -> Result<(), String> {
+fn scan(path: PathBuf, top: usize, mft: bool) -> Result<(), String> {
     // `canonicalize` would prefix every printed path with the verbatim marker on Windows.
     let root = std::path::absolute(&path).map_err(|e| e.to_string())?;
     let progress = StderrProgress {
         last_len: Mutex::new(0),
     };
-    let result = WalkScanner.scan(&root, &ScanOptions::default(), &progress);
+    let scanner: &dyn Scanner = if mft { &MftScanner } else { &WalkScanner };
+    let result = scanner.scan(&root, &ScanOptions::default(), &progress);
     progress.clear();
     let result = result.map_err(|e| e.to_string())?;
 
