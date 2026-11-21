@@ -26,6 +26,24 @@ import { useDebounced } from "./useDebounced";
 type Tab = "projects" | "files" | "dups" | "map" | "history" | "apps" | "dev";
 
 const FILE_LIMIT = 500;
+const FAST_KEY = "devdisk.fastScan";
+
+/** Browser storage can be blocked; the toggle then simply starts off each time. */
+function loadFast(): boolean {
+  try {
+    return localStorage.getItem(FAST_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function saveFast(on: boolean): void {
+  try {
+    localStorage.setItem(FAST_KEY, on ? "1" : "0");
+  } catch {
+    // Not remembered; nothing else depends on it.
+  }
+}
 
 function message(e: unknown): string {
   return typeof e === "string" ? e : e instanceof Error ? e.message : "Something went wrong.";
@@ -37,6 +55,7 @@ function App() {
   const [progress, setProgress] = useState<ScanProgress | null>(null);
   const [summary, setSummary] = useState<ScanSummary | null>(null);
   const [scanError, setScanError] = useState<ScanError | null>(null);
+  const [fast, setFast] = useState(loadFast);
 
   const [tab, setTab] = useState<Tab>("projects");
   const [query, setQuery] = useState("");
@@ -202,12 +221,12 @@ function App() {
     setProgress(null);
     scanningRef.current = true;
     setScanning(true);
-    api.startScan(root.trim()).catch((e: unknown) => {
+    api.startScan(root.trim(), fast).catch((e: unknown) => {
       scanningRef.current = false;
       setScanning(false);
       setScanError({ message: message(e), cancelled: false });
     });
-  }, [root]);
+  }, [root, fast]);
 
   const onSort = (key: FileSort) => {
     if (key === sort) setDescending((d) => !d);
@@ -229,6 +248,11 @@ function App() {
         onChoose={() => void choose()}
         scanning={scanning}
         onScan={scan}
+        fast={fast}
+        onFastChange={(on) => {
+          setFast(on);
+          saveFast(on);
+        }}
         onCancel={() => void api.cancelScan()}
         progress={progress}
         hasScan={summary !== null}

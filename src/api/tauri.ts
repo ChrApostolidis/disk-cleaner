@@ -27,7 +27,7 @@ import {
 } from "./types";
 
 export const tauriApi: DevDiskApi = {
-  startScan: (root) => invoke<void>(COMMANDS.startScan, { root }),
+  startScan: (root, fast) => invoke<void>(COMMANDS.startScan, { root, fast }),
   cancelScan: () => invoke<void>(COMMANDS.cancelScan),
   getSummary: () => invoke<ScanSummary | null>(COMMANDS.getSummary),
   listProjects: (query) => invoke<Project[]>(COMMANDS.listProjects, { query }),

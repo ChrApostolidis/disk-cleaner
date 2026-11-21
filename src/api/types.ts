@@ -362,8 +362,13 @@ export interface Duplicates {
 
 /** Tauri command names and their arguments/results. All commands reject with a string message. */
 export interface DevDiskApi {
-  /** `start_scan`: starts a background scan; rejects if one is running or the path is not a folder. */
-  startScan(root: string): Promise<void>;
+  /**
+   * `start_scan`: starts a background scan; rejects if one is running or the path is not a folder.
+   * `fast` reads the NTFS file table directly: Windows asks for administrator permission (UAC) each time, unless
+   * DevDisk already runs as administrator. Fails through `scan-error` on drives that are not NTFS or when
+   * permission is refused. Progress then shows "Reading the drive's file table… 40%" in `currentPath`.
+   */
+  startScan(root: string, fast: boolean): Promise<void>;
   /** `cancel_scan`: no-op when nothing is running. */
   cancelScan(): Promise<void>;
   /** `get_summary`: null before the first finished scan. */

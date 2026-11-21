@@ -770,7 +770,7 @@ export const mockApi: DevDiskApi = {
   onDuplicatesProgress: (cb) => subscribe(dupProgressL, cb),
   onDuplicatesDone: (cb) => subscribe(dupDoneL, () => cb()),
   onDuplicatesError: (cb) => subscribe(dupErrorL, cb),
-  async startScan(root) {
+  async startScan(root, fast) {
     boot();
     stopDuplicates("duplicate search cancelled");
     if (bootTimer !== null) {
@@ -787,7 +787,8 @@ export const mockApi: DevDiskApi = {
       builtFiles.reduce((a, f) => a + f.allocated, 0) + builtProjects.reduce((a, p) => a + p.totalAllocated, 0);
     const totalFiles = 184_320;
     const totalDirs = 21_450;
-    const duration = 2000;
+    // The file table is read in one pass, so a fast scan finishes much sooner.
+    const duration = fast ? 600 : 2000;
     projects = [];
     files = [];
     summary = null;
