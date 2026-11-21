@@ -1,5 +1,18 @@
 mod commands;
 mod data;
+mod fastscan;
+
+/// When the app was started as the fast-scan helper (an elevated copy of itself), runs the
+/// scan and returns the exit code instead of opening a window.
+pub fn run_helper_if_asked() -> Option<i32> {
+    let args: Vec<std::ffi::OsString> = std::env::args_os().skip(1).collect();
+    let (root, job) = fastscan::parse_helper_args(&args)?;
+    Some(fastscan::run_helper(
+        &devdisk_core::mft::MftScanner,
+        &root,
+        &fastscan::Job::new(job),
+    ))
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

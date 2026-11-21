@@ -8,8 +8,9 @@ use crate::data::{
     dups_match_scan, empty_bin, error_dto, find_project_by_path, folder_size_in_scan, freed_bytes,
     list_bin, load_saved, mark_unkept_copies, progress_dto, query_duplicates, query_files,
     query_projects, reinstall_offers, restore_dtos, result_items, run_cleanup, run_duplicates,
-    run_scan, save_scan, should_apply_snapshot, snapshot_path, treemap_at,
+    run_scan, run_scan_with, save_scan, should_apply_snapshot, snapshot_path, treemap_at,
 };
+use crate::fastscan::{Job, UacLauncher, run_elevated_scan};
 use devdisk_core::apps::{AppEntry, SystemApps, list_apps as list_installed_apps};
 use devdisk_core::bin::{BinItem, BinSummary, SystemRecycleBin};
 use devdisk_core::cleanup::{
@@ -18,6 +19,8 @@ use devdisk_core::cleanup::{
 };
 use devdisk_core::devtools::{DevEnv, DevItem, ToolRules, detect};
 use devdisk_core::duplicates::{DupProgress, DupProgressSink};
+use devdisk_core::elevate::is_elevated;
+use devdisk_core::mft::MftScanner;
 use devdisk_core::rules::Rules;
 use devdisk_core::scanner::{Progress, ProgressSink};
 use devdisk_core::treemap::TreemapNode;
@@ -93,11 +96,37 @@ impl Drop for RunningGuard {
     }
 }
 
-fn scan_thread(app: AppHandle, root: PathBuf, cancel: Arc<AtomicBool>) {
+/// Reads the MFT: here when the app already runs as administrator, otherwise through an
+/// elevated copy of the app (see `fastscan`).
+fn fast_scan(
+    app: &AppHandle,
+    root: &std::path::Path,
+    cancel: Arc<AtomicBool>,
+    sink: &dyn ProgressSink,
+) -> Result<ScanData, ScanErrorDto> {
+    if is_elevated() {
+        return run_scan_with(&MftScanner, root, cancel, sink).map_err(|e| error_dto(&e));
+    }
+    let job = Job::new(
+        app_data_dir(app)
+            .map_err(|message| ScanErrorDto {
+                message,
+                cancelled: false,
+            })?
+            .join("fast-scan"),
+    );
+    run_elevated_scan(root, &job, &UacLauncher, &cancel, sink)
+}
+
+fn scan_thread(app: AppHandle, root: PathBuf, cancel: Arc<AtomicBool>, fast: bool) {
     let guard = RunningGuard(app.clone());
     let sink = EmitSink(app.clone());
     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        run_scan(&root, cancel, &sink)
+        if fast {
+            fast_scan(&app, &root, cancel, &sink)
+        } else {
+            run_scan(&root, cancel, &sink).map_err(|e| error_dto(&e))
+        }
     }));
     // Release the running flag before telling the UI, so a rescan started right
     // after `scan-done` is not rejected as "already running".
@@ -112,7 +141,7 @@ fn scan_thread(app: AppHandle, root: PathBuf, cancel: Arc<AtomicBool>) {
             persist(&app, &data);
         }
         Ok(Err(e)) => {
-            let _ = app.emit(EVENT_ERROR, error_dto(&e));
+            let _ = app.emit(EVENT_ERROR, e);
         }
         Err(_) => {
             let _ = app.emit(
@@ -171,7 +200,9 @@ pub async fn start_scan(
     app: AppHandle,
     state: State<'_, AppState>,
     root: String,
+    fast: Option<bool>,
 ) -> Result<(), String> {
+    let fast = fast.unwrap_or(false);
     let path = PathBuf::from(&root);
     if !path.is_dir() {
         return Err(format!("not a folder: {root}"));
@@ -194,7 +225,7 @@ pub async fn start_scan(
     let thread_app = app.clone();
     let spawned = std::thread::Builder::new()
         .name("devdisk-scan".into())
-        .spawn(move || scan_thread(thread_app, path, cancel));
+        .spawn(move || scan_thread(thread_app, path, cancel, fast));
     if let Err(e) = spawned {
         *lock(&state.running) = None;
         return Err(format!("could not start the scan: {e}"));

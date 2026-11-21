@@ -33,7 +33,7 @@ pub const MAX_FILE_LIMIT: usize = 5000;
 /// Per-folder cut for treemap requests; the rest is folded into one "others" entry.
 pub const TREEMAP_MAX_CHILDREN: usize = 60;
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ScanProgressDto {
     pub files: u64,
@@ -58,7 +58,7 @@ pub struct ScanSummaryDto {
     pub scanned_at: i64,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ScanErrorDto {
     pub message: String,
@@ -144,11 +144,20 @@ pub fn run_scan(
     cancel: Arc<AtomicBool>,
     sink: &dyn ProgressSink,
 ) -> Result<ScanData, ScanError> {
+    run_scan_with(&WalkScanner, root, cancel, sink)
+}
+
+pub fn run_scan_with(
+    scanner: &dyn Scanner,
+    root: &Path,
+    cancel: Arc<AtomicBool>,
+    sink: &dyn ProgressSink,
+) -> Result<ScanData, ScanError> {
     let options = ScanOptions {
         cancel: Some(cancel),
         ..ScanOptions::default()
     };
-    let result = WalkScanner.scan(root, &options, sink)?;
+    let result = scanner.scan(root, &options, sink)?;
     let elapsed_ms = result.elapsed.as_millis() as u64;
     Ok(build_data(
         result.tree,
