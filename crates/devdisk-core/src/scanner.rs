@@ -78,6 +78,12 @@ pub enum ScanError {
     Cancelled,
     #[error("the scanner was too busy with other folders; try again")]
     Busy,
+    #[error("the fast scan needs administrator rights")]
+    NeedsAdmin,
+    #[error("the fast scan only works on NTFS drives, and this one is {0}")]
+    NotNtfs(String),
+    #[error("could not read the drive's file table: {0}")]
+    BadVolume(String),
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }

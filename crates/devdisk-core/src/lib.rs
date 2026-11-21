@@ -7,7 +7,9 @@ pub mod cleanup;
 pub mod detect;
 pub mod devtools;
 pub mod duplicates;
+pub mod elevate;
 pub mod index;
+pub mod mft;
 pub mod projects;
 #[cfg(windows)]
 mod reg;
