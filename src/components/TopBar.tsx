@@ -1,4 +1,5 @@
 import { formatBytes, formatCount, truncateMiddle } from "../format";
+import { BrandMark } from "./BrandMark";
 import type { RecycleBinSummary, ScanProgress } from "../api/types";
 
 interface Props {
@@ -24,7 +25,10 @@ export function TopBar(p: Props) {
   return (
     <header className="topbar">
       <div className="topbar-row">
-        <h1 className="brand">DevDisk</h1>
+        <h1 className="brand">
+          <BrandMark />
+          Ballast
+        </h1>
         {p.hasDialog ? (
           <div className="root-path" title={p.root}>
             {p.root || <span className="muted">No folder chosen</span>}

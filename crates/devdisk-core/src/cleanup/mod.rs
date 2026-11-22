@@ -158,7 +158,7 @@ pub fn preview(
             ));
         }
         if ctx.protected.iter().any(|pr| is_within(path, pr)) {
-            reasons.push(refuse("this folder is used by DevDisk itself".into()));
+            reasons.push(refuse("this folder is used by Ballast itself".into()));
         }
         if node.is_none() {
             reasons.push(refuse("outside the scanned folder".into()));

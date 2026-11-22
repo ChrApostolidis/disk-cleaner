@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "DevDisk",
+  "productName": "Ballast",
   "version": "0.1.0",
   "identifier": "com.apostolidis.disk-cleaner",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "DevDisk",
+        "title": "Ballast",
         "width": 1200,
         "height": 800
       }

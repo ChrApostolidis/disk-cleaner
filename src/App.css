@@ -88,7 +88,8 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* Top bar */
 .topbar { display: flex; flex-direction: column; gap: 10px; }
 .topbar-row { display: flex; align-items: center; gap: 10px; }
-.brand { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin-right: 6px; }
+.brand { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin-right: 6px; }
+.brand-mark { flex: none; }
 .root-path, .root-input {
   flex: 1;
   min-width: 0;

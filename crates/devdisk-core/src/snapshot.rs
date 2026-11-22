@@ -44,7 +44,7 @@ pub struct Snapshot {
 pub enum SnapshotError {
     #[error("snapshot file: {0}")]
     Io(#[from] io::Error),
-    #[error("not a DevDisk snapshot")]
+    #[error("not a Ballast snapshot")]
     NotASnapshot,
     #[error("snapshot version {0} is not supported")]
     UnsupportedVersion(u32),
