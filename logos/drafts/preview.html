@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Logo preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { font: 13px/1.3 "Segoe UI", system-ui, sans-serif; background: #e9e9e9; color: #111; padding: 20px; }
+  h1 { font-size: 16px; margin-bottom: 12px; }
+  .row { display: grid; grid-template-columns: 110px 190px 190px 130px 130px 110px 110px 110px 110px 110px; gap: 10px;
+         align-items: center; background: #fff; border-radius: 10px; padding: 14px; margin-bottom: 14px; height: 246px; }
+  .cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; height: 100%;
+          border-radius: 8px; padding: 8px; overflow: hidden; }
+  /* Every mark is scaled to fit its box, so wide lockups shrink instead of overflowing. */
+  .cell small { color: #888; font-size: 11px; }
+  .light { background: #ffffff; color: #1c2027; --accent: #2563eb; border: 1px solid #eee; }
+  .dark { background: #15171c; color: #e8eaee; --accent: #5b8def; }
+  .dark small { color: #999; }
+  .mono { background: #fff; color: #111; --accent: #111; border: 1px solid #eee; }
+  .big svg { width: 170px; height: 150px; }
+  .sizes { display: flex; align-items: flex-end; gap: 10px; }
+  .s64 svg { width: 64px; height: 64px; } .s32 svg { width: 32px; height: 32px; } .s16 svg { width: 16px; height: 16px; }
+  .circle { width: 90px; height: 90px; border-radius: 50%; overflow: hidden; background: #15171c; color: #e8eaee;
+            --accent: #5b8def; display: flex; align-items: center; justify-content: center; }
+  .circle svg { width: 72px; height: 72px; }
+  .mid svg { width: 90px; height: 80px; }
+  .blur svg { filter: blur(3px); }
+  .mirror svg { transform: scaleX(-1); }
+  .rot svg { transform: rotate(180deg); }
+  .name { font-weight: 600; word-break: break-all; }
+</style></head><body>
+<h1>Logo preview</h1>
+<div class="row">
+  <div class="name">1</div>
+  <div class="cell light big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg><small>light</small></div>
+  <div class="cell dark big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg><small>dark</small></div>
+  <div class="cell light"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell dark"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell mono mid"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg><small>one color</small></div>
+  <div class="cell light"><div class="circle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg></div><small>circle crop</small></div>
+  <div class="cell light mid blur"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg><small>squint</small></div>
+  <div class="cell light mid mirror"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg><small>mirror</small></div>
+  <div class="cell light mid rot"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 1: B with water in the lower counter (B from round 1, counter bottom half in accent). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 144 192H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M80 160H176A32 32 0 0 1 144 192H80Z"/></g></svg><small>rotate 180</small></div>
+</div>
+<div class="row">
+  <div class="name">2</div>
+  <div class="cell light big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg><small>light</small></div>
+  <div class="cell dark big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg><small>dark</small></div>
+  <div class="cell light"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell dark"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell mono mid"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg><small>one color</small></div>
+  <div class="cell light"><div class="circle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg></div><small>circle crop</small></div>
+  <div class="cell light mid blur"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg><small>squint</small></div>
+  <div class="cell light mid mirror"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg><small>mirror</small></div>
+  <div class="cell light mid rot"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg><small>rotate 180</small></div>
+</div>
+<div class="row">
+  <div class="name">3</div>
+  <div class="cell light big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg><small>light</small></div>
+  <div class="cell dark big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg><small>dark</small></div>
+  <div class="cell light"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell dark"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell mono mid"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg><small>one color</small></div>
+  <div class="cell light"><div class="circle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg></div><small>circle crop</small></div>
+  <div class="cell light mid blur"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg><small>squint</small></div>
+  <div class="cell light mid mirror"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg><small>mirror</small></div>
+  <div class="cell light mid rot"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg><small>rotate 180</small></div>
+</div>
+<div class="row">
+  <div class="name">4</div>
+  <div class="cell light big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg><small>light</small></div>
+  <div class="cell dark big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg><small>dark</small></div>
+  <div class="cell light"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell dark"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell mono mid"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg><small>one color</small></div>
+  <div class="cell light"><div class="circle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg></div><small>circle crop</small></div>
+  <div class="cell light mid blur"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg><small>squint</small></div>
+  <div class="cell light mid mirror"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg><small>mirror</small></div>
+  <div class="cell light mid rot"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg><small>rotate 180</small></div>
+</div>
+<div class="row">
+  <div class="name">5</div>
+  <div class="cell light big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg><small>light</small></div>
+  <div class="cell dark big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg><small>dark</small></div>
+  <div class="cell light"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell dark"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell mono mid"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg><small>one color</small></div>
+  <div class="cell light"><div class="circle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg></div><small>circle crop</small></div>
+  <div class="cell light mid blur"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg><small>squint</small></div>
+  <div class="cell light mid mirror"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg><small>mirror</small></div>
+  <div class="cell light mid rot"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 5: settled weight. Porthole ring with an accent disc r40 resting low (centre 128,168). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="168" r="40"/></g></svg><small>rotate 180</small></div>
+</div>
+<div class="row">
+  <div class="name">6</div>
+  <div class="cell light big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg><small>light</small></div>
+  <div class="cell dark big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg><small>dark</small></div>
+  <div class="cell light"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell dark"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell mono mid"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg><small>one color</small></div>
+  <div class="cell light"><div class="circle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg></div><small>circle crop</small></div>
+  <div class="cell light mid blur"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg><small>squint</small></div>
+  <div class="cell light mid mirror"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg><small>mirror</small></div>
+  <div class="cell light mid rot"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 6: balloon lifting off a released weight. Disc r80 at (128,96); accent block 64x32 below with a 32 gap. --><title>Ballast</title><g id="symbol">
+<circle fill="currentColor" cx="128" cy="96" r="80"/>
+<rect style="fill: var(--accent, currentColor)" x="96" y="208" width="64" height="32" rx="8"/></g></svg><small>rotate 180</small></div>
+</div>
+</body></html>

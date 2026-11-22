@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept B "Weighted B" (v2).
+  Same outline as v1 (grid 16, letter box x 48..208, y 32..224, stem x 48..80).
+  Change: the weight now settles low. The upper bowl keeps a 32 weight, the lower bowl's
+  wall thickens toward the bottom: middle bar 32, right wall 40, bottom bar 48.
+  Lower counter: x 80..168, y 128..176 (88 x 48), round end r24 centred (144,152).
+  v1 used one even weight, so the bottom-heavy idea was too subtle to notice.
+-->
+  <title>Ballast</title>
+  <g id="symbol" fill="currentColor" fill-rule="evenodd">
+    <path d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z
+             M80 64H128A16 16 0 0 1 128 96H80Z
+             M80 128H144A24 24 0 0 1 144 176H80Z"/>
+  </g>
+</svg>

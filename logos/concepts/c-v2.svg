@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept C "Keel" (v2): a boat hull in profile with a raked fin and a ballast bulb.
+  Grid unit 16. Bow points right. Content y 48..208, centred on 128.
+  Hull: flat deck y=48 from x 24 to 232; the bottom curves up to a pointed bow at (232,48)
+        and a rounder stern at (24,48); lowest line y=96, flat between x 56 and 144.
+  Fin:  32 wide, raked aft (to the left) by 16 over its length: top x 128..160 at y=88
+        (overlapping the hull), bottom x 112..144 at y=180 (overlapping the bulb).
+  Bulb: torpedo y 176..208 (32 tall): round nose r16 at the right (x 200), tapered tail
+        to a point at (64,192).
+  v1 was mirror-symmetric and read as a T, a pedestal table or an I-beam.
+-->
+  <title>Ballast</title>
+  <g id="symbol" fill="currentColor">
+    <path d="M24 48H232C216 80 184 96 144 96H56C40 96 28 80 24 48Z"/>
+    <path d="M128 88H160L144 180H112Z"/>
+    <path d="M184 176A16 16 0 0 1 184 208H96L64 192L96 176Z"/>
+  </g>
+</svg>

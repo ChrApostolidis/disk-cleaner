@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg>

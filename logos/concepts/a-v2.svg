@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept A "Waterline" (v2): a porthole with the water level inside.
+  Grid unit 16; every key edge sits on a multiple of 16 so it lands on whole pixels at 16 px.
+  Ring: full annulus centred (128,128), outer r112 (x/y 16..240), inner r96 (32..224), 16 thick.
+  Gap between ring and water: 16 (r96 to r80).
+  Water: segment of a circle r80 centred (128,128), below the waterline y=144
+         (16 below centre, so the weight sits low). Half-chord = sqrt(80^2 - 16^2) = 78.38.
+  v1 cut the ring at the waterline and stood it on the solid half, which read as a basket with a handle.
+  Here the ring is whole and the water floats inside it.
+-->
+  <title>Ballast</title>
+  <g id="symbol" fill="currentColor" fill-rule="evenodd">
+    <path d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z
+             M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+    <path d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+  </g>
+</svg>

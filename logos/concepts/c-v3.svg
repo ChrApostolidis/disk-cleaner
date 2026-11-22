@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept C "Keel" (v3): the hull is now the dominant shape so the mark reads as a boat.
+  Grid unit 16. Bow points right. Content y 64..200.
+  Hull: flat deck y=64 from x 24 to 232, 64 deep: the bottom sweeps up to a pointed bow at (232,64)
+        and a rounder stern at (24,64); lowest line y=128, flat between x 64 and 128.
+  Fin:  short, 32 wide, raked aft: top x 112..144 at y=120 (inside the hull), bottom x 96..128 at y=172.
+  Bulb: torpedo y 168..200 (32 tall): round nose r16 at the right (x 176), tail point at (48,184).
+  v2 had a long fin under a shallow hull and read as an italic I.
+-->
+  <title>Ballast</title>
+  <g id="symbol" fill="currentColor">
+    <path d="M24 64H232C216 112 176 128 128 128H64C40 128 28 104 24 64Z"/>
+    <path d="M112 120H144L128 172H96Z"/>
+    <path d="M160 168A16 16 0 0 1 160 200H80L48 184L80 168Z"/>
+  </g>
+</svg>

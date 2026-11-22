@@ -1,0 +1,3 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 4: ballast tank tile. Rounded square ring 16 thick, water below y=144 inset 16. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M64 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H64A48 48 0 0 1 16 192V64A48 48 0 0 1 64 16Z M64 32H192A32 32 0 0 1 224 64V192A32 32 0 0 1 192 224H64A32 32 0 0 1 32 192V64A32 32 0 0 1 64 32Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 144H208V192A16 16 0 0 1 192 208H64A16 16 0 0 1 48 192Z"/></g></svg>

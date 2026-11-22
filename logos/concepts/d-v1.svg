@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v1. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32 everywhere.
+     Stem x48..80. Upper bowl x48..160, y32..128 (top-right corner r48, centre 112,80; counter x80..128, y64..96, r16).
+     Lower bowl x48..208, y96..224 (corners r48, centres 160,144 and 160,176; counter x80..176, y128..192, r16).
+     Waist: square notch at 160,96 where the upper bowl's right side meets the lower bowl's top.
+     Waterline gap y160..176 (exactly where the bottom-right corner begins); ink above, accent below. -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H112A48 48 0 0 1 160 80V96A48 48 0 0 1 208 144V160H176V144A16 16 0 0 0 160 128H80V160H48Z M80 64H112A16 16 0 0 1 112 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 176H80V192H160A16 16 0 0 0 176 176H208A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg>

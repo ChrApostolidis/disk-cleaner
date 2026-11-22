@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Logo preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { font: 13px/1.3 "Segoe UI", system-ui, sans-serif; background: #e9e9e9; color: #111; padding: 20px; }
+  h1 { font-size: 16px; margin-bottom: 12px; }
+  .row { display: grid; grid-template-columns: 110px 190px 190px 130px 130px 110px 110px 110px 110px 110px; gap: 10px;
+         align-items: center; background: #fff; border-radius: 10px; padding: 14px; margin-bottom: 14px; height: 246px; }
+  .cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; height: 100%;
+          border-radius: 8px; padding: 8px; overflow: hidden; }
+  /* Every mark is scaled to fit its box, so wide lockups shrink instead of overflowing. */
+  .cell small { color: #888; font-size: 11px; }
+  .light { background: #ffffff; color: #1c2027; --accent: #2563eb; border: 1px solid #eee; }
+  .dark { background: #15171c; color: #e8eaee; --accent: #5b8def; }
+  .dark small { color: #999; }
+  .mono { background: #fff; color: #111; --accent: #111; border: 1px solid #eee; }
+  .big svg { width: 170px; height: 150px; }
+  .sizes { display: flex; align-items: flex-end; gap: 10px; }
+  .s64 svg { width: 64px; height: 64px; } .s32 svg { width: 32px; height: 32px; } .s16 svg { width: 16px; height: 16px; }
+  .circle { width: 90px; height: 90px; border-radius: 50%; overflow: hidden; background: #15171c; color: #e8eaee;
+            --accent: #5b8def; display: flex; align-items: center; justify-content: center; }
+  .circle svg { width: 72px; height: 72px; }
+  .mid svg { width: 90px; height: 80px; }
+  .blur svg { filter: blur(3px); }
+  .mirror svg { transform: scaleX(-1); }
+  .rot svg { transform: rotate(180deg); }
+  .name { font-weight: 600; word-break: break-all; }
+</style></head><body>
+<h1>Logo preview</h1>
+<div class="row">
+  <div class="name">d-v4</div>
+  <div class="cell light big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg><small>light</small></div>
+  <div class="cell dark big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg><small>dark</small></div>
+  <div class="cell light"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell dark"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell mono mid"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg><small>one color</small></div>
+  <div class="cell light"><div class="circle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg></div><small>circle crop</small></div>
+  <div class="cell light mid blur"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg><small>squint</small></div>
+  <div class="cell light mid mirror"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg><small>mirror</small></div>
+  <div class="cell light mid rot"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!-- Waterline B, v4. Grid unit 16. Letter box x48..208, y32..224. Stroke weight 32, every curve concentric so the wall stays 32.
+     Stem x48..80. Upper bowl x48..176, y32..128: semicircle outer r48 / counter r16, centre 128,80; counter x80..144, y64..96.
+     Lower bowl x48..208, y96..224: right corners outer r48 / counter r16, centres 160,144 and 160,176; counter x80..176, y128..192.
+     Waist: the two r48 outer arcs meet in a V at 172.62,97.69. Waterline gap y144..160, starting where the
+     top-right curve ends, so both cuts fall on straight edges; ink above, accent below (one third of the height). -->
+<title>Ballast</title>
+<g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 172.62 97.69A48 48 0 0 1 208 144H176A16 16 0 0 0 160 128H80V144H48Z M80 64H128A16 16 0 0 1 128 96H80Z"/>
+<path style="fill: var(--accent, currentColor)" d="M48 160H80V192H160A16 16 0 0 0 176 176V160H208V176A48 48 0 0 1 160 224H48Z"/>
+</g>
+</svg><small>rotate 180</small></div>
+</div>
+<div class="row">
+  <div class="name">e-v1</div>
+  <div class="cell light big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg><small>light</small></div>
+  <div class="cell dark big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg><small>dark</small></div>
+  <div class="cell light"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell dark"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell mono mid"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg><small>one color</small></div>
+  <div class="cell light"><div class="circle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg></div><small>circle crop</small></div>
+  <div class="cell light mid blur"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg><small>squint</small></div>
+  <div class="cell light mid mirror"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg><small>mirror</small></div>
+  <div class="cell light mid rot"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept E "B with ballast water" (v1).
+  Grid unit 8 (crisp at 32 px); counter, water and inner stem edges on multiples of 16 where the weight allows.
+  Weight 24 everywhere: stem x 56..80, bars top 24..48, middle 88..112, bottom 208..232, bowls concentric with their counters.
+  Upper counter y 48..88 (40 tall), right end a semicircle r20 at (136,68); outer bowl r44.
+  Lower counter y 112..208 (96 tall, 2.4x the upper), right end a semicircle r48 at (144,160); outer bowl r72.
+  The two outer arcs meet at the waist (171.8, 93.6). B spans x 56..216, y 24..232; stem corners sit 126.5 from centre.
+  Water: the lower counter inset by a 16 gap on every side (r32 at (144,160)), filled below the waterline y=160
+  (its centre, so the right corner is a clean 90 degrees): x 96..176, y 160..192, 32 deep, with 48 of air above.
+  Fixes the draft, where the water touched the ink and the B went muddy in one colour.
+-->
+  <title>Ballast</title>
+  <g id="symbol">
+    <path fill="currentColor" fill-rule="evenodd" d="M56 24H136A44 44 0 0 1 171.8 93.58A72 72 0 0 1 144 232H56Z M80 48H136A20 20 0 0 1 136 88H80Z M80 112H144A48 48 0 0 1 144 208H80Z"/>
+    <path style="fill: var(--accent, currentColor)" d="M96 160H176A32 32 0 0 1 144 192H96Z"/>
+  </g>
+</svg><small>rotate 180</small></div>
+</div>
+<div class="row">
+  <div class="name">f-v2</div>
+  <div class="cell light big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg><small>light</small></div>
+  <div class="cell dark big"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg><small>dark</small></div>
+  <div class="cell light"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell dark"><div class="sizes"><span class="s64"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg></span><span class="s32"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg></span><span class="s16"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg></span></div><small>64 / 32 / 16</small></div>
+  <div class="cell mono mid"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg><small>one color</small></div>
+  <div class="cell light"><div class="circle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg></div><small>circle crop</small></div>
+  <div class="cell light mid blur"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg><small>squint</small></div>
+  <div class="cell light mid mirror"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg><small>mirror</small></div>
+  <div class="cell light mid rot"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg><small>rotate 180</small></div>
+</div>
+</body></html>

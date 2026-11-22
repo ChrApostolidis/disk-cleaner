@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 2: porthole, water low, one bubble rising (r16 at 128,96). --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M49.62 144H206.38A80 80 0 0 1 49.62 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="128" cy="96" r="16"/></g></svg>

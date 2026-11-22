@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!--
+  Ballast, concept F v2: porthole, low water, two bubbles rising off-centre.
+  Grid unit 16 on a 256 canvas, centre (128,128).
+  Ring: filled annulus, outer r112 (edges 16/240), inner r96 (edges 32/224), 16 thick.
+  Water: segment of a circle r88 below the surface y=144 (one unit under centre);
+    8 gap to the ring at the bottom, so it reads as liquid held by the porthole, not a floating half-disc.
+  Bubbles (accent) climb up and to the right, growing and spreading as they rise, so they read
+  as bubbles, not as an eye over a smile:
+    small r12 at (148,124): 8 above the water, right edge on x 160;
+    large r20 at (176,84): top edge on y 64, ~17 gap to the small bubble, ~11 gap to the ring.
+--><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M16 128A112 112 0 1 1 240 128A112 112 0 1 1 16 128Z M32 128A96 96 0 1 0 224 128A96 96 0 1 0 32 128Z"/>
+<path style="fill: var(--accent, currentColor)" d="M41.47 144H214.53A88 88 0 0 1 41.47 144Z"/>
+<circle style="fill: var(--accent, currentColor)" cx="148" cy="124" r="12"/>
+<circle style="fill: var(--accent, currentColor)" cx="176" cy="84" r="20"/>
+</g></svg>

@@ -1,0 +1,3 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Draft 3: waterline B. Gap y 160..176; above in ink, below in accent. --><title>Ballast</title><g id="symbol">
+<path fill="currentColor" fill-rule="evenodd" d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 208 160H48Z M80 64H128A16 16 0 0 1 128 96H80Z M80 128H144A32 32 0 0 1 176 160H80Z"/>
+<path style="fill: var(--accent, currentColor)" fill-rule="evenodd" d="M48 176H205.97A64 64 0 0 1 144 224H48Z M80 176H171.71A32 32 0 0 1 144 192H80Z"/></g></svg>

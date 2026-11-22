@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ballast, concept A "Waterline".
+  Grid unit 16 (with 8 for padding). One circle, centre (128,128),
+  outer radius R = 108, leaving 20 units (~8%) of padding on every side.
+  Waterline: a level horizontal gap 16 units tall, from y = 144 to y = 160.
+  Its centre (y = 152) sits 24 units below the circle's centre, so the mass
+  rides low. Both edges fall on the 16-unit grid, so the gap lands on whole
+  pixels at 16 px and 32 px.
+  Upper part: a ring (filled annulus band) between R = 108 and r = 88,
+  thickness 20, cut flat at y = 144. Drawn as one closed path, outer arc over
+  the top, short horizontal step in, inner arc back (no hole, so no evenodd).
+    Outer arc ends: dy = 16, dx = sqrt(108^2 - 16^2) = 106.8082 -> x = 21.1918 / 234.8082
+    Inner arc ends: dy = 16, dx = sqrt(88^2 - 16^2)  = 86.5332  -> x = 41.4668 / 214.5332
+  Lower part: solid circular segment of the same R = 108 circle below the
+  chord y = 160.
+    Chord ends: dy = 32, dx = sqrt(108^2 - 32^2) = 103.1504 -> x = 24.8496 / 231.1504
+  Narrowest details: waterline gap 16, ring thickness 20.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>Ballast</title>
+  <g id="symbol" fill="currentColor">
+    <path d="M21.1918 144 A108 108 0 1 1 234.8082 144 H214.5332 A88 88 0 1 0 41.4668 144 Z"/>
+    <path d="M24.8496 160 H231.1504 A108 108 0 0 1 24.8496 160 Z"/>
+  </g>
+</svg>

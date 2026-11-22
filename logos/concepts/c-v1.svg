@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ballast, concept C "Keel": a sailing keel in profile, one merged filled path.
+  Grid unit 8 (deck and bulb offset by half a unit, 4, to center the mark vertically).
+  Content box x 24..232, y 44..212 (208 x 168), centered on 128,128.
+  Hull: flat deck y=44 from x 24 to 232 (width 208); bottom is a half-ellipse,
+        radii 104 x 32 (center 128,44), so depth 32 and blunt, rounded ends.
+  Fin:  width 32 (x 112..144), centered; leaves the hull curve at y~75.6 and runs
+        straight down to the bulb top at y=164 (visible length ~88).
+  Bulb: horizontal capsule 112 x 48 (x 72..184, y 164..212), end radius 24.
+  Hull is ~1.9x the bulb width. Mirror-symmetric about x=128.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>Ballast</title>
+  <g id="symbol" fill="currentColor">
+    <path d="M24 44 H232 A104 32 0 0 1 144 75.62 V164 H160 A24 24 0 0 1 160 212 H96 A24 24 0 0 1 96 164 H112 V75.62 A104 32 0 0 1 24 44 Z"/>
+  </g>
+</svg>

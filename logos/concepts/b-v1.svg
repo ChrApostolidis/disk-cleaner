@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<!--
+  Ballast, concept B "Weighted B" (v1).
+  Grid unit 16 (every straight edge sits on a multiple of 16, so it lands on whole pixels at 16 and 32 px).
+  One weight T = 32 for stem, top bar, middle bar, bottom bar and both bowl curves.
+  Letter box x 48..208, y 32..224 (160 x 192), centred on 128,128.
+  Stem: x 48..80, straight square left edge, full height.
+  Upper bowl: y 32..128 (96 tall), outer right edge a half-circle r48 centred (128,80), reaches x 176.
+  Lower bowl: y 96..224 (128 tall), outer right edge a half-circle r64 centred (144,160), reaches x 208.
+  The bowls share the middle bar (y 96..128); the two outer arcs meet in the waist notch at (170.8,101.8).
+  Lower bowl is 32 wider and 32 taller than the upper bowl, so the letter sits weighted low.
+  Counters (evenodd holes, concentric with the outer arcs, inner radius = outer radius - 32):
+    upper x 80..144, y 64..96 (64 x 32, r16); lower x 80..176, y 128..192 (96 x 64, r32).
+  Narrowest detail: upper counter height 32 (4 px at 32 px, 2 px at 16 px).
+-->
+  <title>Ballast</title>
+  <g id="symbol" fill="currentColor" fill-rule="evenodd">
+    <path d="M48 32H128A48 48 0 0 1 170.8 101.8A64 64 0 0 1 144 224H48Z
+             M80 64H128A16 16 0 0 1 128 96H80Z
+             M80 128H144A32 32 0 0 1 144 192H80Z"/>
+  </g>
+</svg>
