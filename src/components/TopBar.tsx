@@ -1,5 +1,6 @@
 import { formatBytes, formatCount, truncateMiddle } from "../format";
 import { BrandMark } from "./BrandMark";
+import { FastScanSwitch } from "./FastScanSwitch";
 import type { RecycleBinSummary, ScanProgress } from "../api/types";
 
 interface Props {
@@ -56,18 +57,7 @@ export function TopBar(p: Props) {
         >
           Recycle Bin · {p.bin ? (p.bin.items === 0 ? "empty" : formatBytes(p.bin.size)) : "…"}
         </button>
-        <label
-          className="toggle fast-toggle"
-          title="Reads the drive's file table directly: much faster on big drives and sees every folder. Windows asks for administrator permission each time. NTFS drives only."
-        >
-          <input
-            type="checkbox"
-            checked={p.fast}
-            disabled={p.scanning}
-            onChange={(e) => p.onFastChange(e.target.checked)}
-          />
-          Fast scan (admin)
-        </label>
+        <FastScanSwitch on={p.fast} disabled={p.scanning} onChange={p.onFastChange} />
         {p.scanning ? (
           <button className="btn" onClick={p.onCancel}>
             Cancel
