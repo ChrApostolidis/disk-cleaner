@@ -4,7 +4,7 @@
     <img src="logos/final/lockup-horizontal-color-light.svg" alt="Ballast" width="420">
   </picture>
 </p>
-<p align="center">A disk analyzer for Windows that knows which folders in your dev projects can be rebuilt, and frees them safely.</p>
+<p align="center">A more developer-oriented Windows disk analyzer, from seeing what's taking up space on your whole disk to finding old projects and leftovers you forgot about.</p>
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2563eb" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/platform-Windows-1c2027" alt="Platform: Windows">
@@ -46,7 +46,7 @@ Developers fill a disk in their own way. Every project you start, even the ones 
 - **Deleting is scary.** Most cleaners delete for good. One wrong tick and real work is gone, like a `vendor/` folder that was committed on purpose.
 - **The heaviest weight is hidden.** Old Node.js, .NET and Python versions, Docker disks and Android emulator images sit outside your projects folder, so a project cleaner never sees them.
 
-Ballast does both jobs in one app. It's a full disk analyzer, with biggest files, a treemap and duplicates, that also understands projects. It knows what each folder is, what can be rebuilt and what must stay. Everything it removes goes to the Recycle Bin first, with a log to put it back.
+Ballast does both jobs in one app. It's a full disk analyzer, with biggest files, a treemap and duplicates, that also understands projects. It knows which parts of a project are safe to remove and which must stay. Everything it removes goes to the Recycle Bin first, with a log to put it back.
 
 ---
 
